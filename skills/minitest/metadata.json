@@ -1,0 +1,21 @@
+{
+  "name": "minitap-testing-flows",
+  "version": "1.0.0",
+  "description": "Create and manage Minitap testing flow templates from a mobile app codebase. Use when building automated test scenarios for mobile apps that will be executed by an AI agent on real devices.",
+  "author": "Minitap",
+  "license": "MIT",
+  "keywords": [
+    "testing",
+    "mobile",
+    "automation",
+    "flow-templates",
+    "minitap"
+  ],
+  "triggers": [
+    "minitap testing flows",
+    "create testing flows",
+    "reconcile testing flows",
+    "generate test scenarios",
+    "update minitap tests"
+  ]
+}
