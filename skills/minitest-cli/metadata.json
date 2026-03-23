@@ -1,0 +1,24 @@
+{
+  "name": "minitest-cli",
+  "version": "1.0.0",
+  "description": "Use the minitest CLI to manage testing flows, upload builds, execute test runs on real mobile devices, and analyse results via the command line.",
+  "author": "Minitap",
+  "license": "MIT",
+  "keywords": [
+    "testing",
+    "mobile",
+    "automation",
+    "cli",
+    "minitest",
+    "minitap"
+  ],
+  "triggers": [
+    "minitest cli",
+    "minitest command",
+    "run mobile tests",
+    "upload build",
+    "test my app with cli",
+    "minitest flow",
+    "minitest run"
+  ]
+}
