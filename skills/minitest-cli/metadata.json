@@ -1,0 +1,24 @@
+{
+  "name": "minitest-cli",
+  "version": "1.0.0",
+  "description": "Use the minitest CLI to manage testing flows, upload builds, execute test runs on real mobile devices, and analyse results. The canonical skill file lives in the minitest-cli repository and is fetched at runtime.",
+  "author": "Minitap",
+  "license": "MIT",
+  "keywords": [
+    "testing",
+    "mobile",
+    "cli",
+    "automation",
+    "minitest",
+    "minitap"
+  ],
+  "triggers": [
+    "minitest",
+    "minitest cli",
+    "run mobile tests",
+    "upload build",
+    "create testing flow",
+    "check test results",
+    "test my app"
+  ]
+}
