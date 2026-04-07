@@ -82,12 +82,12 @@ minitest --app <app_id> flow delete <flow_id> --force
 
 ### 3. Upload builds
 
-Upload your `.apk` (Android) or `.app` (iOS) build artifacts. The platform is
-auto-detected from the file extension.
+Upload your `.apk` (Android) or `.ipa` (iOS) build artifacts. The platform is
+auto-detected from the file extension. Only `.apk` and `.ipa` files are supported.
 
 ```bash
 minitest --app <app_id> build upload ./app-release.apk
-minitest --app <app_id> build upload ./MyApp.app --platform ios
+minitest --app <app_id> build upload ./MyApp.ipa
 minitest --app <app_id> build list
 ```
 
@@ -141,7 +141,7 @@ criterion, fail reasons, and recording URLs.
 export MINITEST_APP_ID="<app_id>"
 
 minitest --json build upload ./app.apk
-minitest --json build upload ./MyApp.app
+minitest --json build upload ./MyApp.ipa
 
 IOS_BUILD=$(minitest --json build list --platform ios --page-size 1 | jq -r '.[0].id')
 ANDROID_BUILD=$(minitest --json build list --platform android --page-size 1 | jq -r '.[0].id')
