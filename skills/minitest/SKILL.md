@@ -15,11 +15,31 @@ scenarios that an AI agent will execute on a real mobile device.
 
 A **flow template** defines a user journey to test. It has:
 - **name**: human-readable title (e.g. "User Login", "Add Item to Cart")
-- **type**: one of `login`, `registration`, `checkout`, `onboarding`, `search`,
+- **type**: one of `login`, `registration`, `onboarding`, `search`,
   `settings`, `navigation`, `form`, `profile`, `other`
 - **description** (optional): context about the flow
 - **acceptance criteria**: list of plain-text assertions an AI agent will verify
   visually on a phone screen
+
+## Restricted Flow Types
+
+**Do not** create flow templates for billing, payment, or checkout flows.
+These involve real transactions and payment providers that cannot be safely
+tested with the on-device agent at this time. If you discover checkout or
+payment screens during codebase analysis, skip them and inform the user that
+billing flows are not yet supported.
+
+## Test Account Requirement
+
+Before creating flow templates, **ask the user to provide test account
+credentials** (via `set_app_test_config`) for any flows that require
+authentication or specific app state. The on-device agent needs real,
+working credentials to execute flows end-to-end. Flows should only cover
+journeys that the provided test account is able to perform — do not create
+flows for features the test account cannot access.
+
+If the user has not configured test credentials yet, prompt them to do so
+before creating flows that require login or account-specific state.
 
 ## Acceptance Criteria Rules
 
@@ -67,18 +87,24 @@ When the user asks to **create testing flows** for their app:
    - Forms and user input screens
    - Search functionality
    - Settings and profile management
-   - Checkout or payment flows
    - Onboarding sequences
 
-4. **Map journeys to flow templates** — for each discovered journey:
+4. **Confirm test account** — if any discovered journeys require login or
+   account-specific state, verify the user has configured test credentials
+   via `set_app_test_config`. Only create flows for actions the test account
+   can perform.
+
+5. **Map journeys to flow templates** — for each discovered journey:
+   - Skip any billing, payment, or checkout flows (not yet supported)
    - Choose the most specific `type` from the enum
    - Write a clear `name` and optional `description`
    - Define acceptance criteria following the rules above
    - Cover the **happy path** end-to-end
+   - Ensure the flow is achievable with the configured test account
 
-5. **Create the templates** — call `create_flow_template` for each one.
+6. **Create the templates** — call `create_flow_template` for each one.
 
-6. **Summarise** — present the user with a table of created templates.
+7. **Summarise** — present the user with a table of created templates.
 
 ## Workflow: Reconcile Flow Templates
 
@@ -115,8 +141,14 @@ When the user asks to **reconcile** or **update flows given changes**:
 ## Tips
 
 - Prefer **fewer, well-defined flows** over many shallow ones.
+- Focus on user stories that are fully available within the app and that the
+  test account can execute end-to-end.
+- **Never** create flows for billing, payment, or checkout — these are not
+  supported yet.
 - Group related screens into a single flow when they form a natural journey.
 - Don't create separate flows for minor variations — use a single flow covering
   the main path.
 - When the codebase uses feature flags or A/B tests, template the most common
   variant.
+- Always ensure the test account has the permissions and data needed for every
+  flow you create.
