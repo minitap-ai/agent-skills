@@ -63,8 +63,17 @@ minitest --app <app_id> flow create \
   --criteria "The home screen is displayed after successful login"
 ```
 
-**Flow types:** `login`, `registration`, `checkout`, `onboarding`, `search`,
+**Flow types:** `login`, `registration`, `onboarding`, `search`,
 `settings`, `navigation`, `form`, `profile`, `other`.
+
+> **Restricted:** Do not create `checkout`, billing, or payment flows — these
+> involve real transactions and are not yet supported. Skip them during codebase
+> analysis and inform the user.
+
+**Test account requirement:** Before creating flows that require login or
+account-specific state, ensure the user provides test credentials via
+`minitest --app <app_id> config set`. Flows should only cover journeys the
+test account can actually perform.
 
 **Acceptance criteria rules:**
 - Must be **visually verifiable** (the agent only sees the screen)
