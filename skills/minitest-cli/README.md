@@ -16,7 +16,7 @@ This skill teaches AI agents how to use the `minitest` command-line tool. Where 
 
 ## What It Does
 
-1. **Guides CLI installation and authentication** (`pip install minitest-cli`, `minitest auth login`)
+1. **Guides CLI installation and authentication** (`curl -fsSL .../install.sh | bash`, `minitest auth login`)
 2. **Manages testing flows** — create, list, update, and delete flows with acceptance criteria
 3. **Handles build uploads** — upload `.apk` / `.ipa` artifacts
 4. **Runs tests on real devices** — start runs, watch progress, collect results
@@ -25,7 +25,7 @@ This skill teaches AI agents how to use the `minitest` command-line tool. Where 
 ## Requirements
 
 - Python 3.10+
-- `minitest-cli` installed (`pip install minitest-cli`)
+- `minitest-cli` installed (`curl -fsSL https://raw.githubusercontent.com/minitap-ai/minitest-cli/main/install.sh | bash`)
 - A Minitap account and registered app
 
 ## Installation

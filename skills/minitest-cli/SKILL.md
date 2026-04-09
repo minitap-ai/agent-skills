@@ -16,27 +16,27 @@ results.
 
 ## Prerequisites
 
-- Install: `pip install minitest-cli`
+- Install: `curl -fsSL https://raw.githubusercontent.com/minitap-ai/minitest-cli/main/install.sh | bash`
 - Authenticate: `minitest auth login` (opens browser for OAuth)
 - Set target app: `export MINITEST_APP_ID=<uuid>` or pass `--app <uuid>` before
   any subcommand
 
 ## Global Flags
 
-| Flag | Effect |
-|------|--------|
-| `--json` | JSON to stdout, diagnostics to stderr — ideal for piping and parsing |
+| Flag         | Effect                                                                      |
+| ------------ | --------------------------------------------------------------------------- |
+| `--json`     | JSON to stdout, diagnostics to stderr — ideal for piping and parsing        |
 | `--app <id>` | Target app (overrides `MINITEST_APP_ID`). Must appear before the subcommand |
 
 ## Exit Codes
 
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | General error |
-| 2 | Authentication required |
-| 3 | Network / API error |
-| 4 | Resource not found |
+| Code | Meaning                 |
+| ---- | ----------------------- |
+| 0    | Success                 |
+| 1    | General error           |
+| 2    | Authentication required |
+| 3    | Network / API error     |
+| 4    | Resource not found      |
 
 ## Core Workflow
 
@@ -76,12 +76,14 @@ account-specific state, ensure the user provides test credentials via
 test account can actually perform.
 
 **Acceptance criteria rules:**
+
 - Must be **visually verifiable** (the agent only sees the screen)
 - Must be **specific** and **unambiguous**
 - One assertion per criterion
 - Order them chronologically as they appear in the journey
 
 Other flow commands:
+
 ```bash
 minitest --app <app_id> flow list
 minitest --app <app_id> flow get <flow_id>
@@ -172,15 +174,15 @@ minitest --json run status <run_id> | jq '.status'
 
 ## Quick Reference
 
-| Task | Command |
-|------|---------|
-| List apps | `minitest apps list` |
-| Create flow | `minitest --app ID flow create --name "..." --type login --criteria "..."` |
-| List flows | `minitest --app ID flow list` |
-| Upload build | `minitest --app ID build upload ./app.apk` |
-| List builds | `minitest --app ID build list` |
-| Run one flow | `minitest --app ID run start "Flow Name" --ios-build X --android-build Y` |
-| Run all flows | `minitest --app ID run all --ios-build X --android-build Y` |
-| Check run | `minitest --app ID run status RUN_ID` |
-| List runs | `minitest --app ID run list "Flow Name"` |
-| Auth | `minitest auth login` |
+| Task          | Command                                                                    |
+| ------------- | -------------------------------------------------------------------------- |
+| List apps     | `minitest apps list`                                                       |
+| Create flow   | `minitest --app ID flow create --name "..." --type login --criteria "..."` |
+| List flows    | `minitest --app ID flow list`                                              |
+| Upload build  | `minitest --app ID build upload ./app.apk`                                 |
+| List builds   | `minitest --app ID build list`                                             |
+| Run one flow  | `minitest --app ID run start "Flow Name" --ios-build X --android-build Y`  |
+| Run all flows | `minitest --app ID run all --ios-build X --android-build Y`                |
+| Check run     | `minitest --app ID run status RUN_ID`                                      |
+| List runs     | `minitest --app ID run list "Flow Name"`                                   |
+| Auth          | `minitest auth login`                                                      |
