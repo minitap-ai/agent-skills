@@ -145,18 +145,28 @@ minitest --app <app_id> run list "User Login" --all
 A completed run includes per-platform results: pass/fail for each acceptance
 criterion, fail reasons, and recording URLs.
 
-### 6. Acknowledge test maintenance
+### 6. Verify and acknowledge test maintenance
 
-After making code changes on a branch, **always** acknowledge that tests are up
-to date before opening or updating a pull request. This stamps the HEAD commit
-so the CI gate knows tests have been reviewed.
+After making code changes, **always** check whether the changes affect existing
+test flows before opening or updating a pull request. Follow this process:
+
+1. **Review the impact** - look at the code changes and determine if they affect
+   any screens, navigation, or user journeys covered by existing test flows.
+   Use `minitest --app <app_id> flow list` to see current flows and their
+   acceptance criteria.
+
+2. **Update tests if needed** - if your changes modify UI, navigation, or
+   behavior covered by existing flows, update the affected flow templates:
+   - Add new acceptance criteria for new functionality
+   - Update criteria that no longer match the changed behavior
+   - Create new flows for entirely new user journeys
+   - Remove flows for deleted features
+
+3. **Acknowledge** - once tests are aligned with the code changes, stamp the
+   HEAD commit:
 
 ```bash
-# Get the current HEAD SHA
-COMMIT_SHA=$(git rev-parse HEAD)
-
-# Acknowledge test maintenance
-minitest --app <app_id> maintenance-check "$COMMIT_SHA"
+minitest --app <app_id> maintenance-check "$(git rev-parse HEAD)"
 ```
 
 If the app has maintenance checks enabled, a GitHub Check Run "Minitest
@@ -164,7 +174,8 @@ Maintenance" will appear on the PR. It fails until the HEAD commit is
 acknowledged. Running `maintenance-check` flips it to success.
 
 **When to run:** after every commit that changes application code, before
-opening or pushing to a PR.
+opening or pushing to a PR. Do not acknowledge without first verifying that
+tests are still aligned with the code.
 
 ## CI / Automation Pattern
 

@@ -107,19 +107,29 @@ When the user asks to **create testing flows** for their app:
 
 7. **Summarise** — present the user with a table of created templates.
 
-## Workflow: Acknowledge Test Maintenance
+## Workflow: Verify and Acknowledge Test Maintenance
 
-After creating or reconciling flow templates, **always** acknowledge that tests
-are up to date for the current commit. This is required when the app has
-maintenance checks enabled - a CI gate will block the PR until the HEAD commit
-is acknowledged.
+After making code changes, **always** check whether the changes affect existing
+test flows before opening or updating a pull request. Follow this process:
 
-1. **Get the current commit SHA** - use `git rev-parse HEAD` to get the SHA.
-2. **Call `maintenance_check`** with the `app_id` and `commit_sha`.
-3. If the call fails, inform the user.
+1. **Review the impact** - look at the code changes and determine if they affect
+   any screens, navigation, or user journeys covered by existing flows. Call
+   `list_flow_templates` to see current flows and their acceptance criteria.
 
-**When to run:** after every code change that could affect tests, before opening
-or pushing to a PR.
+2. **Update tests if needed** - if changes modify UI, navigation, or behavior
+   covered by existing flows:
+   - Use `update_flow_template` to fix criteria that no longer match
+   - Use `create_flow_template` for new user journeys
+   - Use `delete_flow_template` for removed features
+   - Add new acceptance criteria for new functionality
+
+3. **Acknowledge** - once tests are aligned with the code, get the current
+   commit SHA (`git rev-parse HEAD`) and call `maintenance_check` with the
+   `app_id` and `commit_sha`.
+
+If the app has maintenance checks enabled, a GitHub Check Run will appear on
+the PR. It fails until acknowledged. Do not acknowledge without first verifying
+that tests are still aligned with the code.
 
 ## Workflow: Reconcile Flow Templates
 
