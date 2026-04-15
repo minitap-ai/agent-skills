@@ -175,6 +175,10 @@ If the app has maintenance checks enabled, a GitHub Check Run "Minitest
 Maintenance" will appear on the PR. It fails until the HEAD commit is
 acknowledged. Running `maintenance-check` flips it to success.
 
+If the command returns "Maintenance check is not enabled", suggest the user
+to enable automatic test maintenance checks in their app's test configuration
+settings on the Minitest webapp.
+
 **When to run:** after every commit that changes application code, before
 opening or pushing to a PR. Do not acknowledge without first verifying that
 tests are still aligned with the code.

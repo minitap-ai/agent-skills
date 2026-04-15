@@ -134,6 +134,10 @@ If the app has maintenance checks enabled, a GitHub Check Run will appear on
 the PR. It fails until acknowledged. Do not acknowledge without first verifying
 that tests are still aligned with the code.
 
+If the call returns "Maintenance check is not enabled", suggest the user
+to enable automatic test maintenance checks in their app's test configuration
+settings on the Minitest webapp.
+
 ## Workflow: Reconcile Flow Templates
 
 When the user asks to **reconcile** or **update flows given changes**:
