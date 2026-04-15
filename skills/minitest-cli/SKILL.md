@@ -145,6 +145,27 @@ minitest --app <app_id> run list "User Login" --all
 A completed run includes per-platform results: pass/fail for each acceptance
 criterion, fail reasons, and recording URLs.
 
+### 6. Acknowledge test maintenance
+
+After making code changes on a branch, **always** acknowledge that tests are up
+to date before opening or updating a pull request. This stamps the HEAD commit
+so the CI gate knows tests have been reviewed.
+
+```bash
+# Get the current HEAD SHA
+COMMIT_SHA=$(git rev-parse HEAD)
+
+# Acknowledge test maintenance
+minitest --app <app_id> maintenance-check "$COMMIT_SHA"
+```
+
+If the app has maintenance checks enabled, a GitHub Check Run "Minitest
+Maintenance" will appear on the PR. It fails until the HEAD commit is
+acknowledged. Running `maintenance-check` flips it to success.
+
+**When to run:** after every commit that changes application code, before
+opening or pushing to a PR.
+
 ## CI / Automation Pattern
 
 ```bash
@@ -185,4 +206,5 @@ minitest --json run status <run_id> | jq '.status'
 | Run all flows | `minitest --app ID run all --ios-build X --android-build Y`                |
 | Check run     | `minitest --app ID run status RUN_ID`                                      |
 | List runs     | `minitest --app ID run list "Flow Name"`                                   |
+| Ack tests     | `minitest --app ID maintenance-check $(git rev-parse HEAD)`                |
 | Auth          | `minitest auth login`                                                      |

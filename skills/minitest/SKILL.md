@@ -67,6 +67,7 @@ You have access to these tools via the `testing-service` MCP:
 | `create_flow_template` | Create a new template |
 | `update_flow_template` | Update name, description, type, or criteria |
 | `delete_flow_template` | Remove a template |
+| `maintenance_check` | Acknowledge that tests have been reviewed for a commit |
 
 ## Workflow: Create Flow Templates
 
@@ -105,6 +106,20 @@ When the user asks to **create testing flows** for their app:
 6. **Create the templates** — call `create_flow_template` for each one.
 
 7. **Summarise** — present the user with a table of created templates.
+
+## Workflow: Acknowledge Test Maintenance
+
+After creating or reconciling flow templates, **always** acknowledge that tests
+are up to date for the current commit. This is required when the app has
+maintenance checks enabled - a CI gate will block the PR until the HEAD commit
+is acknowledged.
+
+1. **Get the current commit SHA** - use `git rev-parse HEAD` to get the SHA.
+2. **Call `maintenance_check`** with the `app_id` and `commit_sha`.
+3. If the call fails, inform the user.
+
+**When to run:** after every code change that could affect tests, before opening
+or pushing to a PR.
 
 ## Workflow: Reconcile Flow Templates
 
