@@ -4,9 +4,9 @@ description: >
   Use the minitest CLI to manage testing flows, upload builds, execute test runs
   on real mobile devices, and analyse results. Use when the user asks to test
   their mobile app, create test scenarios, run tests, check test results, or
-  manage builds via the command line. Also use proactively after any code change
-  that affects UI, navigation, or user journeys to verify that existing tests
-  are still aligned and acknowledge test maintenance before opening a PR.
+  manage builds via the command line. Also use after any code change that
+  affects UI, navigation, or user journeys to check if existing tests need
+  to be updated.
 ---
 
 # Minitest CLI

@@ -4,9 +4,8 @@ description: >
   Create and manage Minitap testing flow templates from a mobile app codebase.
   Use when user mentions "minitap testing flows", "create testing flows",
   "reconcile testing flows", or asks to generate test scenarios for their app.
-  Also use proactively after any code change that affects UI, navigation, or
-  user journeys to verify that existing tests are still aligned and acknowledge
-  test maintenance before opening a PR.
+  Also use after any code change that affects UI, navigation, or user journeys
+  to check if existing tests need to be updated.
 ---
 
 # Minitap Testing Flows
