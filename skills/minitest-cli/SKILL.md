@@ -2,15 +2,15 @@
 name: minitest-cli
 description: >
   Use the minitest CLI to manage testing flows, upload builds, execute test runs
-  on real mobile devices, and analyse results. Use when the user asks to test
+  on virtual devices (simulators/emulators), and analyse results. Use when the user asks to test
   their mobile app, create test scenarios, run tests, check test results, or
   manage builds via the command line.
 ---
 
 # Minitest CLI
 
-`minitest` is a command-line tool for automated mobile app testing on real
-devices. An AI agent analyses the app screen and verifies acceptance criteria
+`minitest` is a command-line tool for automated mobile app testing on virtual
+devices (simulators & emulators). An AI agent analyses the app screen and verifies acceptance criteria
 you define. You manage everything through the CLI: flows, builds, runs, and
 results.
 
@@ -96,6 +96,20 @@ minitest --app <app_id> flow delete <flow_id> --force
 Upload your `.apk` (Android) or `.ipa` (iOS) build artifacts. The platform is
 auto-detected from the file extension. Only `.apk` and `.ipa` files are supported.
 
+> **Important — virtual-device builds required:**
+>
+> Tests run on simulators/emulators, not physical devices. You must upload
+> builds that are compatible with virtual devices:
+>
+> - **iOS:** a **Simulator build** (`.ipa` built for the iOS Simulator
+>   destination, not a physical device). In Xcode: build for
+>   *"Any iOS Simulator Device"* or a specific Simulator target.
+> - **Android:** an **x86_64-compatible `.apk`**. Ensure your Gradle build
+>   includes the `x86_64` ABI.
+>
+> Uploading a device-only build (e.g. an arm64 iOS archive or an arm-only
+> Android APK) will cause test runs to fail.
+
 ```bash
 minitest --app <app_id> build upload ./app-release.apk
 minitest --app <app_id> build upload ./MyApp.ipa
@@ -104,7 +118,7 @@ minitest --app <app_id> build list
 
 ### 4. Run tests
 
-Execute a flow on real devices. You must provide both an iOS and an Android
+Execute a flow on virtual devices. You must provide both an iOS and an Android
 build ID.
 
 ```bash
