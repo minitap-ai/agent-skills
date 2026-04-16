@@ -157,15 +157,18 @@ test flows before opening or updating a pull request. Follow this process:
    Use `minitest --app <app_id> flow list` to see current flows and their
    acceptance criteria.
 
-2. **Update tests if needed** - if your changes modify UI, navigation, or
-   behavior covered by existing flows, update the affected flow templates:
-   - Add new acceptance criteria for new functionality
-   - Update criteria that no longer match the changed behavior
-   - Create new flows for entirely new user journeys
-   - Remove flows for deleted features
+2. **Propose changes to the user** - if your code changes modify UI,
+   navigation, or behavior covered by existing flows, do NOT silently update
+   them. Present a summary of proposed changes and ask the user to confirm:
+   - New acceptance criteria for new functionality
+   - Updated criteria for changed behavior
+   - New flows for entirely new user journeys
+   - Flows to delete for removed features
 
-3. **Acknowledge** - once tests are aligned with the code changes, stamp the
-   HEAD commit:
+   Only apply the updates after the user confirms.
+
+3. **Acknowledge** - once tests are aligned with the code changes (or the user
+   confirms no update is needed), stamp the HEAD commit:
 
 ```bash
 minitest --app <app_id> maintenance-check "$(git rev-parse HEAD)"
@@ -177,7 +180,7 @@ acknowledged. Running `maintenance-check` flips it to success.
 
 If the command returns "Maintenance check is not enabled", suggest the user
 to enable automatic test maintenance checks in their app's test configuration
-settings on the Minitest webapp.
+settings on the Minitest web app (`https://app.minitap.ai/apps/<app_id>/test/settings`).
 
 **When to run:** after every commit that changes application code, before
 opening or pushing to a PR. Do not acknowledge without first verifying that

@@ -118,16 +118,20 @@ test flows before opening or updating a pull request. Follow this process:
    any screens, navigation, or user journeys covered by existing flows. Call
    `list_flow_templates` to see current flows and their acceptance criteria.
 
-2. **Update tests if needed** - if changes modify UI, navigation, or behavior
-   covered by existing flows:
-   - Use `update_flow_template` to fix criteria that no longer match
-   - Use `create_flow_template` for new user journeys
-   - Use `delete_flow_template` for removed features
-   - Add new acceptance criteria for new functionality
+2. **Propose changes to the user** - if code changes modify UI, navigation, or
+   behavior covered by existing flows, do NOT silently update them. Present a
+   summary of proposed changes and ask the user to confirm before calling any
+   write tools:
+   - `update_flow_template` for criteria that no longer match
+   - `create_flow_template` for new user journeys
+   - `delete_flow_template` for removed features
 
-3. **Acknowledge** - once tests are aligned with the code, get the current
-   commit SHA (`git rev-parse HEAD`) and call `maintenance_check` with the
-   `app_id` and `commit_sha`.
+   Only apply the updates after the user confirms.
+
+3. **Acknowledge** - once tests are aligned with the code (or the user confirms
+   no update is needed), call `maintenance_check` with the `app_id` and the
+   current commit SHA. Retrieve the SHA via shell (e.g. `git rev-parse HEAD`
+   if your environment supports shell execution) or ask the user for it.
 
 If the app has maintenance checks enabled, a GitHub Check Run will appear on
 the PR. It fails until acknowledged. Do not acknowledge without first verifying
@@ -135,7 +139,7 @@ that tests are still aligned with the code.
 
 If the call returns "Maintenance check is not enabled", suggest the user
 to enable automatic test maintenance checks in their app's test configuration
-settings on the Minitest webapp.
+settings on the Minitest web app (`https://app.minitap.ai/apps/<app_id>/test/settings`).
 
 ## Workflow: Reconcile Flow Templates
 
