@@ -6,15 +6,15 @@ Skills follow the [Agent Skills](https://agentskills.io/) format.
 
 ## Available Skills
 
-### minitap-testing-flows
+### minitest-cli
 
-Create and manage Minitap testing flow templates from a mobile app codebase. Use when building automated test scenarios for mobile apps.
+Manage Minitest testing flows, upload builds, execute test runs, and acknowledge test maintenance via the `minitest` CLI.
 
 Use when:
 - "Create testing flows for my app"
-- "Generate test scenarios"
-- "Reconcile testing flows"
-- "Update my Minitap tests"
+- "Run mobile tests"
+- "Upload build"
+- After code changes that affect UI or user journeys
 
 ## Installation
 
@@ -25,7 +25,7 @@ npx skills add minitap-ai/agent-skills
 To install a specific skill:
 
 ```bash
-npx skills add minitap-ai/agent-skills --skill minitap-testing-flows
+npx skills add minitap-ai/agent-skills --skill minitest-cli
 ```
 
 ## Usage

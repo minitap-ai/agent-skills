@@ -4,7 +4,9 @@ description: >
   Use the minitest CLI to manage testing flows, upload builds, execute test runs
   on real mobile devices, and analyse results. Use when the user asks to test
   their mobile app, create test scenarios, run tests, check test results, or
-  manage builds via the command line.
+  manage builds via the command line. Also use after any code change that
+  affects UI, navigation, or user journeys to check if existing tests need
+  to be updated.
 ---
 
 # Minitest CLI
@@ -145,6 +147,45 @@ minitest --app <app_id> run list "User Login" --all
 A completed run includes per-platform results: pass/fail for each acceptance
 criterion, fail reasons, and recording URLs.
 
+### 6. Verify and acknowledge test maintenance
+
+After making code changes, **always** check whether the changes affect existing
+test flows before opening or updating a pull request. Follow this process:
+
+1. **Review the impact** - look at the code changes and determine if they affect
+   any screens, navigation, or user journeys covered by existing test flows.
+   Use `minitest --app <app_id> flow list` to see current flows and their
+   acceptance criteria.
+
+2. **Propose changes to the user** - if your code changes modify UI,
+   navigation, or behavior covered by existing flows, do NOT silently update
+   them. Present a summary of proposed changes and ask the user to confirm:
+   - New acceptance criteria for new functionality
+   - Updated criteria for changed behavior
+   - New flows for entirely new user journeys
+   - Flows to delete for removed features
+
+   Only apply the updates after the user confirms.
+
+3. **Acknowledge** - once tests are aligned with the code changes (or the user
+   confirms no update is needed), stamp the HEAD commit:
+
+```bash
+minitest --app <app_id> maintenance-check "$(git rev-parse HEAD)"
+```
+
+If the app has maintenance checks enabled, a GitHub Check Run "Minitest
+Maintenance" will appear on the PR. It fails until the HEAD commit is
+acknowledged. Running `maintenance-check` flips it to success.
+
+If the command returns "Maintenance check is not enabled", suggest the user
+to enable automatic test maintenance checks in their app's test configuration
+settings on the Minitest web app (`https://app.minitap.ai/apps/<app_id>/test/settings`).
+
+**When to run:** after every commit that changes application code, before
+opening or pushing to a PR. Do not acknowledge without first verifying that
+tests are still aligned with the code.
+
 ## CI / Automation Pattern
 
 ```bash
@@ -185,4 +226,5 @@ minitest --json run status <run_id> | jq '.status'
 | Run all flows | `minitest --app ID run all --ios-build X --android-build Y`                |
 | Check run     | `minitest --app ID run status RUN_ID`                                      |
 | List runs     | `minitest --app ID run list "Flow Name"`                                   |
+| Ack tests     | `minitest --app ID maintenance-check $(git rev-parse HEAD)`                |
 | Auth          | `minitest auth login`                                                      |
