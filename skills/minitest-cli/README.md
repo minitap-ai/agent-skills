@@ -19,7 +19,7 @@ This skill teaches AI agents how to use the `minitest` command-line tool. Where 
 1. **Guides CLI installation and authentication** (`curl -fsSL .../install.sh | bash`, `minitest auth login`)
 2. **Manages testing flows** — create, list, update, and delete flows with acceptance criteria
 3. **Handles build uploads** — upload `.apk` / `.ipa` artifacts
-4. **Runs tests on real devices** — start runs, watch progress, collect results
+4. **Runs tests on virtual devices** — start runs, watch progress, collect results
 5. **Supports CI/automation** — JSON output mode, exit codes, scripting patterns
 
 ## Requirements
