@@ -171,15 +171,18 @@ test flows before opening or updating a pull request. Follow this process:
    Use `minitest --app <app_id> flow list` to see current flows and their
    acceptance criteria.
 
-2. **Propose changes to the user** - if your code changes modify UI,
-   navigation, or behavior covered by existing flows, do NOT silently update
-   them. Present a summary of proposed changes and ask the user to confirm:
+2. **Propose changes to the user and wait for confirmation** - if your code
+   changes modify UI, navigation, or behavior covered by existing flows, do
+   NOT silently update them. Present a clear summary of every proposed change
+   and **wait for the user to explicitly approve** before running any
+   `flow create`, `flow update`, or `flow delete` commands:
    - New acceptance criteria for new functionality
    - Updated criteria for changed behavior
    - New flows for entirely new user journeys
    - Flows to delete for removed features
 
-   Only apply the updates after the user confirms.
+   Never proceed without explicit user approval — the user must have the
+   final say on what gets tested.
 
 3. **Acknowledge** - once tests are aligned with the code changes (or the user
    confirms no update is needed), stamp the HEAD commit:
