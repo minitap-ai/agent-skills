@@ -1,7 +1,7 @@
 ---
 name: minitest-cli
 description: >
-  Use the minitest CLI to manage testing flows, upload builds, execute test runs
+  Use the minitest CLI to manage user stories, upload builds, execute test runs
   on virtual devices (simulators/emulators), and analyse results. Use when the user asks to test
   their mobile app, create test scenarios, run tests, check test results, or
   manage builds via the command line. Also use after any code change that
@@ -13,7 +13,7 @@ description: >
 
 `minitest` is a command-line tool for automated mobile app testing on virtual
 devices (simulators & emulators). An AI agent analyses the app screen and verifies acceptance criteria
-you define. You manage everything through the CLI: flows, builds, runs, and
+you define. You manage everything through the CLI: user stories, builds, runs, batches, and
 results.
 
 ## Prerequisites
@@ -27,7 +27,7 @@ results.
 
 | Flag         | Effect                                                                      |
 | ------------ | --------------------------------------------------------------------------- |
-| `--json`     | JSON to stdout, diagnostics to stderr — ideal for piping and parsing        |
+| `--json`     | camelCase JSON to stdout, diagnostics to stderr — ideal for piping          |
 | `--app <id>` | Target app (overrides `MINITEST_APP_ID`). Must appear before the subcommand |
 
 ## Exit Codes
@@ -46,17 +46,17 @@ results.
 
 ```bash
 minitest apps list                # find your app ID
-minitest --json apps list         # JSON array of {id, name, tenant_id}
+minitest --json apps list         # JSON array of {id, name, tenantId}
 ```
 
-### 2. Create testing flows
+### 2. Create user stories
 
-A **flow** describes a user journey to test. It has a name, a type, an optional
-description, and a list of **acceptance criteria** — plain-text assertions the
-AI agent will verify visually on the device screen.
+A **user story** describes a user journey to test. It has a name, a type, an
+optional description, and a list of **acceptance criteria** — plain-text
+assertions the AI agent will verify visually on the device screen.
 
 ```bash
-minitest --app <app_id> flow create \
+minitest --app <app_id> user-story create \
   --name "User Login" \
   --type login \
   --description "Email/password login from welcome screen" \
@@ -65,17 +65,17 @@ minitest --app <app_id> flow create \
   --criteria "The home screen is displayed after successful login"
 ```
 
-**Flow types:** `login`, `registration`, `onboarding`, `search`,
-`settings`, `navigation`, `form`, `profile`, `other`.
+**User story types:** `login`, `registration`, `onboarding`, `search`,
+`settings`, `navigation`, `form`, `profile`, `other`, `custom`.
 
-> **Restricted:** Do not create `checkout`, billing, or payment flows — these
-> involve real transactions and are not yet supported. Skip them during codebase
-> analysis and inform the user.
+> **Restricted:** Do not create `checkout`, billing, or payment user stories —
+> these involve real transactions and are not yet supported. Skip them during
+> codebase analysis and inform the user.
 
-**Test account requirement:** Before creating flows that require login or
-account-specific state, ensure the user provides test credentials via
-`minitest --app <app_id> config set`. Flows should only cover journeys the
-test account can actually perform.
+**Test account requirement:** Before creating user stories that require login
+or account-specific state, ensure the user provides test credentials via the
+Minitest web app's test configuration. User stories should only cover journeys
+the test account can actually perform.
 
 **Acceptance criteria rules:**
 
@@ -84,14 +84,22 @@ test account can actually perform.
 - One assertion per criterion
 - Order them chronologically as they appear in the journey
 
-Other flow commands:
+Other user story commands:
 
 ```bash
-minitest --app <app_id> flow list
-minitest --app <app_id> flow get <flow_id>
-minitest --app <app_id> flow update <flow_id> --name "New Name" --add-criteria "New check"
-minitest --app <app_id> flow delete <flow_id> --force
+minitest --app <app_id> user-story list
+minitest --app <app_id> user-story get <user_story_id>
+minitest --app <app_id> user-story update <user_story_id> --name "New Name"
+minitest --app <app_id> user-story update <user_story_id> --add-criteria "New check"
+minitest --app <app_id> user-story update <user_story_id> \
+  --criteria "First check" --criteria "Second check"   # full replace
+minitest --app <app_id> user-story delete <user_story_id> --force
 ```
+
+> **Acceptance criteria are versioned.** `--criteria` fully replaces the set:
+> unchanged content preserves identity (stable `criterionId`), modified content
+> creates a new version on the same criterion, and removed items are
+> soft-deleted. `--add-criteria` only appends.
 
 ### 3. Upload builds
 
@@ -120,26 +128,36 @@ minitest --app <app_id> build list
 
 ### 4. Run tests
 
-Execute a flow on virtual devices. You must provide both an iOS and an Android
-build ID.
+Execute a user story on virtual devices. Provide at least one of
+`--ios-build` or `--android-build`; single-platform apps may omit the other.
 
 ```bash
-# Run a single flow (by name or UUID) and wait for results
+# Run a single user story (by name or UUID) and wait for results
 minitest --app <app_id> run start "User Login" \
   --ios-build <ios_build_id> \
   --android-build <android_build_id>
 
-# Fire-and-forget (returns run ID immediately — useful in CI)
+# Android-only app
+minitest --app <app_id> run start "User Login" \
+  --android-build <android_build_id>
+
+# Fire-and-forget (returns runId immediately — useful in CI)
 minitest --app <app_id> --json run start "User Login" \
   --ios-build <ios_build_id> \
   --android-build <android_build_id> \
   --no-watch
 
-# Run ALL flows at once (always fire-and-forget)
+# Run ALL user stories at once (creates one batch, fire-and-forget)
 minitest --app <app_id> run all \
   --ios-build <ios_build_id> \
   --android-build <android_build_id>
+
+# Cancel a running or pending run
+minitest --app <app_id> run cancel <run_id>
 ```
+
+Under the hood, `run start` and `run all` create a **batch**. A single run is
+just a batch with one user story.
 
 ### 5. Check results
 
@@ -150,42 +168,58 @@ minitest --app <app_id> run status <run_id>
 # Poll until completion
 minitest --app <app_id> run status <run_id> --watch
 
-# List all runs for a flow
+# List all runs for a user story
 minitest --app <app_id> run list "User Login"
 minitest --app <app_id> run list "User Login" --status failed
 minitest --app <app_id> run list "User Login" --all
 ```
 
-**Run statuses:** `pending` -> `running` -> `completed` | `failed`
+**Run statuses:** `pending` → `running` → `completed` | `failed` | `cancelled`
 
 A completed run includes per-platform results: pass/fail for each acceptance
 criterion, fail reasons, and recording URLs.
 
-### 6. Verify and acknowledge test maintenance
+### 6. Work with batches
+
+A batch groups runs triggered together (by `run all`, CI, or a single
+`run start`). Use the `batch` group to inspect or cancel them.
+
+```bash
+minitest --app <app_id> batch list                      # recent batches
+minitest --app <app_id> batch list --status running
+minitest --app <app_id> batch list --commit-sha abc1234
+minitest --app <app_id> batch list --user-story <id>
+minitest --app <app_id> batch get <batch_id>            # batch + its runs
+minitest --app <app_id> batch cancel <batch_id>         # cancels all pending/running runs
+```
+
+**Batch statuses:** `pending` | `awaiting_build` | `running` | `completed` | `failed` | `cancelled`
+
+### 7. Verify and acknowledge test maintenance
 
 After making code changes, **always** check whether the changes affect existing
-test flows before opening or updating a pull request. Follow this process:
+user stories before opening or updating a pull request. Follow this process:
 
-1. **Review the impact** - look at the code changes and determine if they affect
-   any screens, navigation, or user journeys covered by existing test flows.
-   Use `minitest --app <app_id> flow list` to see current flows and their
-   acceptance criteria.
+1. **Review the impact** — look at the code changes and determine if they affect
+   any screens, navigation, or user journeys covered by existing user stories.
+   Use `minitest --app <app_id> user-story list` to see current user stories
+   and their acceptance criteria.
 
-2. **Propose changes to the user and wait for confirmation** - if your code
-   changes modify UI, navigation, or behavior covered by existing flows, do
-   NOT silently update them. Present a clear summary of every proposed change
-   and **wait for the user to explicitly approve** before running any
-   `flow create`, `flow update`, or `flow delete` commands:
+2. **Propose changes to the user and wait for confirmation** — if your code
+   changes modify UI, navigation, or behavior covered by existing user stories,
+   do NOT silently update them. Present a clear summary of every proposed
+   change and **wait for the user to explicitly approve** before running any
+   `user-story create`, `user-story update`, or `user-story delete` commands:
    - New acceptance criteria for new functionality
    - Updated criteria for changed behavior
-   - New flows for entirely new user journeys
-   - Flows to delete for removed features
+   - New user stories for entirely new user journeys
+   - User stories to delete for removed features
 
    Never proceed without explicit user approval — the user must have the
    final say on what gets tested.
 
-3. **Acknowledge** - once tests are aligned with the code changes (or the user
-   confirms no update is needed), stamp the HEAD commit:
+3. **Acknowledge** — once user stories are aligned with the code changes (or
+   the user confirms no update is needed), stamp the HEAD commit:
 
 ```bash
 minitest --app <app_id> maintenance-check "$(git rev-parse HEAD)"
@@ -195,18 +229,23 @@ If the app has maintenance checks enabled, a GitHub Check Run "Minitest
 Maintenance" will appear on the PR. It fails until the HEAD commit is
 acknowledged. Running `maintenance-check` flips it to success.
 
-If the command returns "Maintenance check is not enabled", suggest the user
-to enable automatic test maintenance checks in their app's test configuration
-settings on the Minitest web app (`https://app.minitap.ai/apps/<app_id>/test/settings`).
+Possible error outcomes:
+
+- _"Maintenance check is not enabled"_ — suggest the user enable automatic
+  test maintenance checks at
+  `https://app.minitap.ai/apps/<app_id>/test/settings`.
+- _"App ... has no GitHub repository connected"_ — the CLI returns a link to
+  `https://app.minitap.ai/settings/integrations` where the user can connect
+  their GitHub repo.
 
 **When to run:** after every commit that changes application code, before
 opening or pushing to a PR. Do not acknowledge without first verifying that
-tests are still aligned with the code.
+user stories are still aligned with the code.
 
 ## CI / Automation Pattern
 
 ```bash
-# Upload builds, run all flows, collect results
+# Upload builds, run all user stories, collect results
 export MINITEST_APP_ID="<app_id>"
 
 minitest --json build upload ./app.apk
@@ -222,26 +261,32 @@ minitest --json run all \
 
 ## JSON Output
 
-Every command supports `--json`. JSON goes to stdout, diagnostics to stderr.
-This makes it safe to pipe:
+Every command supports `--json`. JSON goes to stdout (camelCase keys, matching
+the backend API), diagnostics go to stderr. Safe to pipe:
 
 ```bash
-minitest --json flow list | jq '.[].name'
+minitest --json user-story list | jq '.items[].name'
 minitest --json run status <run_id> | jq '.status'
+minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns | length)}'
 ```
 
 ## Quick Reference
 
-| Task          | Command                                                                    |
-| ------------- | -------------------------------------------------------------------------- |
-| List apps     | `minitest apps list`                                                       |
-| Create flow   | `minitest --app ID flow create --name "..." --type login --criteria "..."` |
-| List flows    | `minitest --app ID flow list`                                              |
-| Upload build  | `minitest --app ID build upload ./app.apk`                                 |
-| List builds   | `minitest --app ID build list`                                             |
-| Run one flow  | `minitest --app ID run start "Flow Name" --ios-build X --android-build Y`  |
-| Run all flows | `minitest --app ID run all --ios-build X --android-build Y`                |
-| Check run     | `minitest --app ID run status RUN_ID`                                      |
-| List runs     | `minitest --app ID run list "Flow Name"`                                   |
-| Ack tests     | `minitest --app ID maintenance-check $(git rev-parse HEAD)`                |
-| Auth          | `minitest auth login`                                                      |
+| Task                | Command                                                                           |
+| ------------------- | --------------------------------------------------------------------------------- |
+| List apps           | `minitest apps list`                                                              |
+| Create user story   | `minitest --app ID user-story create --name "..." --type login --criteria "..."` |
+| List user stories   | `minitest --app ID user-story list`                                               |
+| Update user story   | `minitest --app ID user-story update <id> --add-criteria "..."`                   |
+| Upload build        | `minitest --app ID build upload ./app.apk`                                        |
+| List builds         | `minitest --app ID build list`                                                    |
+| Run one user story  | `minitest --app ID run start "Story Name" --ios-build X --android-build Y`        |
+| Run all user stories| `minitest --app ID run all --ios-build X --android-build Y`                       |
+| Cancel a run        | `minitest --app ID run cancel <run_id>`                                           |
+| Check run           | `minitest --app ID run status <run_id>`                                           |
+| List runs for story | `minitest --app ID run list "Story Name"`                                         |
+| List batches        | `minitest --app ID batch list`                                                    |
+| Get batch + runs    | `minitest --app ID batch get <batch_id>`                                          |
+| Cancel batch        | `minitest --app ID batch cancel <batch_id>`                                       |
+| Ack tests           | `minitest --app ID maintenance-check $(git rev-parse HEAD)`                       |
+| Auth                | `minitest auth login`                                                             |
