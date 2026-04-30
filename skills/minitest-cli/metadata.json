@@ -19,6 +19,8 @@
     "upload build",
     "test my app with cli",
     "minitest flow",
-    "minitest run"
+    "minitest run",
+    "minitest apps create",
+    "create minitest app"
   ]
 }
