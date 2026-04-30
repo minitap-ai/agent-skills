@@ -101,7 +101,46 @@ minitest --app <app_id> user-story delete <user_story_id> --force
 > creates a new version on the same criterion, and removed items are
 > soft-deleted. `--add-criteria` only appends.
 
-### 3. Upload builds
+### 3. Reading flow types and app knowledge
+
+When generating user stories programmatically (e.g. from an exploration
+subagent), validate every `--type` value against the live list of flow types
+before calling `user-story create` — invalid values exit non-zero.
+
+```bash
+# List valid flow (user-story) type values, one per line
+minitest flow-types list
+
+# Same data as a JSON array, easy to pipe into jq
+minitest --json flow-types list
+```
+
+`flow-types list` wraps `GET /api/v1/user-story-types` on testing-service.
+There is no public write endpoint at the time of writing — adding new types
+requires a backend change.
+
+For app-level prompt context (the markdown blob that conditions the AI agent
+during runs), use `app-knowledge`:
+
+```bash
+# Read the current AppKnowledge content (markdown to stdout)
+minitest app-knowledge get --app <app_id>
+
+# Same plus version metadata as JSON
+minitest --json app-knowledge get --app <app_id>
+
+# Push a new version inline
+minitest app-knowledge update --app <app_id> --content "# App Knowledge\n..."
+
+# Or load it from a file (preferred for non-trivial markdown)
+minitest app-knowledge update --app <app_id> --content-file ./app-knowledge.md
+```
+
+`app-knowledge update` calls `PUT /api/v1/apps/{app_id}/app-knowledge` and
+prints the new `versionNumber` to stdout (full record with `--json`). Each
+update creates a new prompt version — there is no rollback shortcut.
+
+### 4. Upload builds
 
 Upload your `.apk` (Android) or `.ipa` (iOS) build artifacts. The platform is
 auto-detected from the file extension. Only `.apk` and `.ipa` files are supported.
@@ -126,7 +165,7 @@ minitest --app <app_id> build upload ./MyApp.ipa
 minitest --app <app_id> build list
 ```
 
-### 4. Run tests
+### 5. Run tests
 
 Execute a user story on virtual devices. Provide at least one of
 `--ios-build` or `--android-build`; single-platform apps may omit the other.
@@ -159,7 +198,7 @@ minitest --app <app_id> run cancel <run_id>
 Under the hood, `run start` and `run all` create a **batch**. A single run is
 just a batch with one user story.
 
-### 5. Check results
+### 6. Check results
 
 ```bash
 # Check a specific run
@@ -179,7 +218,7 @@ minitest --app <app_id> run list "User Login" --all
 A completed run includes per-platform results: pass/fail for each acceptance
 criterion, fail reasons, and recording URLs.
 
-### 6. Work with batches
+### 7. Work with batches
 
 A batch groups runs triggered together (by `run all`, CI, or a single
 `run start`). Use the `batch` group to inspect or cancel them.
@@ -195,7 +234,7 @@ minitest --app <app_id> batch cancel <batch_id>         # cancels all pending/ru
 
 **Batch statuses:** `pending` | `awaiting_build` | `running` | `completed` | `failed` | `cancelled`
 
-### 7. Verify and acknowledge test maintenance
+### 8. Verify and acknowledge test maintenance
 
 After making code changes, **always** check whether the changes affect existing
 user stories before opening or updating a pull request. Follow this process:
@@ -278,6 +317,9 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | Create user story   | `minitest --app ID user-story create --name "..." --type login --criteria "..."` |
 | List user stories   | `minitest --app ID user-story list`                                               |
 | Update user story   | `minitest --app ID user-story update <id> --add-criteria "..."`                   |
+| List flow types     | `minitest flow-types list`                                                        |
+| Read app knowledge  | `minitest app-knowledge get --app ID`                                             |
+| Update app knowledge| `minitest app-knowledge update --app ID --content-file ./knowledge.md`            |
 | Upload build        | `minitest --app ID build upload ./app.apk`                                        |
 | List builds         | `minitest --app ID build list`                                                    |
 | Run one user story  | `minitest --app ID run start "Story Name" --ios-build X --android-build Y`        |
