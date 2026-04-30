@@ -49,6 +49,28 @@ minitest apps list                # find your app ID
 minitest --json apps list         # JSON array of {id, name, tenantId}
 ```
 
+#### Creating apps
+
+If the user does not yet have an app for the project, create one. The app
+lives under a tenant; when the authenticated user belongs to a single
+tenant the CLI auto-resolves it, otherwise pass `--tenant <id>` explicitly
+(`apps list` exposes existing tenant IDs in JSON mode).
+
+```bash
+# Auto-resolve tenant (single-tenant users)
+minitest apps create --name "My App"
+
+# Explicit tenant; print just the new app id on stdout
+minitest apps create --tenant <tenant_id> --name "My App"
+
+# Full record as JSON, suitable for piping
+minitest --json apps create --tenant <tenant_id> --name "My App" \
+  --description "Mobile companion" --slug "my-app" --icon ./icon.png
+```
+
+In a multi-tenant non-interactive context (CI, piped invocation), `--tenant`
+is required: the command exits 1 with a clear error otherwise.
+
 ### 2. Create user stories
 
 A **user story** describes a user journey to test. It has a name, a type, an
@@ -275,6 +297,7 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | Task                | Command                                                                           |
 | ------------------- | --------------------------------------------------------------------------------- |
 | List apps           | `minitest apps list`                                                              |
+| Create app          | `minitest apps create --name "My App" [--tenant ID] [--description ...] [--slug ...] [--icon ./icon.png]` |
 | Create user story   | `minitest --app ID user-story create --name "..." --type login --criteria "..."` |
 | List user stories   | `minitest --app ID user-story list`                                               |
 | Update user story   | `minitest --app ID user-story update <id> --add-criteria "..."`                   |
