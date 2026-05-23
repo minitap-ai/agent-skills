@@ -355,3 +355,46 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | Cancel batch        | `minitest --app ID batch cancel <batch_id>`                                       |
 | Ack tests           | `minitest --app ID maintenance-check $(git rev-parse HEAD)`                       |
 | Auth                | `minitest auth login`                                                             |
+| List test profiles  | `minitest --app ID test-profile list`                                             |
+| List shared profiles| `minitest test-profile list-shared`                                               |
+| Create test profile | `minitest --app ID test-profile create --name "..." --username "..." --password-stdin` |
+| Update test profile | `minitest --app ID test-profile update <id> [--name ...] [--clear-password]`      |
+| Delete test profile | `minitest --app ID test-profile delete <id> --force`                              |
+| List test files     | `minitest --app ID test-file list [--kind image\|document\|video\|audio\|other]`  |
+| Upload test file    | `minitest --app ID test-file upload ./local/file.pdf --note "..."`                |
+| Get test file       | `minitest --app ID test-file get <id>` (returns short-lived download URL)         |
+| Update test file    | `minitest --app ID test-file update <id> [--name ...] [--clear-note]`             |
+| Delete test file    | `minitest --app ID test-file delete <id> --force`                                 |
+| Bind profile to story | `minitest --app ID user-story-binding set-profile <story_id> --profile <id>`    |
+| Clear story profile | `minitest --app ID user-story-binding set-profile <story_id> --clear`             |
+| Bind files to story | `minitest --app ID user-story-binding set-files <story_id> --file <id> --file <id>` |
+| List story files    | `minitest --app ID user-story-binding list-files <story_id>`                      |
+
+## Test profiles, test files, and story bindings
+
+Test profiles let you store credentials (username/password/about) that the agent
+will use when running a user story. They are app-scoped by default; shared
+profiles live in a tenant-wide pool and surface via `list-shared`.
+
+Test files are arbitrary blobs (max 25 MB; image/video/audio/document/other) that
+get pushed to the device before the agent runs the story. Use them for things
+like profile photos, sample PDFs, or recordings the story under test depends on.
+
+Bindings link profiles or files to a specific user story:
+
+- Profile binding: at most one profile per story. `set-profile --clear` unbinds.
+- File binding: many files per story. `set-files` is **atomic replace** — pass
+  every file id you want bound; omitted ids are unbound. `--clear` unbinds all.
+
+### Passwords on the CLI
+
+`--password` accepts an inline value but is logged by your shell history. Prefer
+`--password-stdin` and pipe the secret in:
+
+```bash
+printf "%s" "$MY_PASSWORD" | minitest --app $APP test-profile create \
+  --name "Customer A" --username alice --password-stdin
+```
+
+The two flags are mutually exclusive. To wipe an existing password, use
+`update --clear-password`.
