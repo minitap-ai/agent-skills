@@ -356,7 +356,7 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | Ack tests           | `minitest --app ID maintenance-check $(git rev-parse HEAD)`                       |
 | Auth                | `minitest auth login`                                                             |
 | List test profiles  | `minitest --app ID test-profile list`                                             |
-| List shared profiles| `minitest test-profile list-shared`                                               |
+| List shared profiles| `minitest test-profile list-shared` (Minitap-provided pool; currently Google account only) |
 | Create test profile | `minitest --app ID test-profile create --name "..." --username "..." --password-stdin` |
 | Update test profile | `minitest --app ID test-profile update <id> [--name ...] [--clear-password]`      |
 | Delete test profile | `minitest --app ID test-profile delete <id> --force`                              |
@@ -373,8 +373,9 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 ## Test profiles, test files, and story bindings
 
 Test profiles let you store credentials (username/password/about) that the agent
-will use when running a user story. They are app-scoped by default; shared
-profiles live in a tenant-wide pool and surface via `list-shared`.
+will use when running a user story. They are app-scoped by default. Shared
+profiles are Minitap-provided accounts available to all test-enabled tenants and
+surface via `list-shared` (currently only a Google account).
 
 Test files are arbitrary blobs (max 25 MB; image/video/audio/document/other) that
 get pushed to the device before the agent runs the story. Use them for things
