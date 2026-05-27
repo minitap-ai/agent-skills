@@ -256,7 +256,7 @@ minitest --app <app_id> batch cancel <batch_id>         # cancels all pending/ru
 
 **Batch statuses:** `pending` | `awaiting_build` | `running` | `completed` | `failed` | `cancelled`
 
-### 8. Verify and acknowledge test maintenance
+### 8. Keep user stories aligned with code changes
 
 After making code changes, **always** check whether the changes affect existing
 user stories before opening or updating a pull request. Follow this process:
@@ -279,29 +279,8 @@ user stories before opening or updating a pull request. Follow this process:
    Never proceed without explicit user approval — the user must have the
    final say on what gets tested.
 
-3. **Acknowledge** — once user stories are aligned with the code changes (or
-   the user confirms no update is needed), stamp the HEAD commit:
-
-```bash
-minitest --app <app_id> maintenance-check "$(git rev-parse HEAD)"
-```
-
-If the app has maintenance checks enabled, a GitHub Check Run "Minitest
-Maintenance" will appear on the PR. It fails until the HEAD commit is
-acknowledged. Running `maintenance-check` flips it to success.
-
-Possible error outcomes:
-
-- _"Maintenance check is not enabled"_ — suggest the user enable automatic
-  test maintenance checks at
-  `https://app.minitap.ai/apps/<app_id>/test/settings`.
-- _"App ... has no GitHub repository connected"_ — the CLI returns a link to
-  `https://app.minitap.ai/settings/integrations` where the user can connect
-  their GitHub repo.
-
 **When to run:** after every commit that changes application code, before
-opening or pushing to a PR. Do not acknowledge without first verifying that
-user stories are still aligned with the code.
+opening or pushing to a PR.
 
 ## CI / Automation Pattern
 
@@ -353,7 +332,6 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | List batches        | `minitest --app ID batch list`                                                    |
 | Get batch + runs    | `minitest --app ID batch get <batch_id>`                                          |
 | Cancel batch        | `minitest --app ID batch cancel <batch_id>`                                       |
-| Ack tests           | `minitest --app ID maintenance-check $(git rev-parse HEAD)`                       |
 | Auth                | `minitest auth login`                                                             |
 | List test profiles  | `minitest --app ID test-profile list`                                             |
 | List shared profiles| `minitest test-profile list-shared` (Minitap-provided pool; currently Google account only) |
