@@ -256,32 +256,6 @@ minitest --app <app_id> batch cancel <batch_id>         # cancels all pending/ru
 
 **Batch statuses:** `pending` | `awaiting_build` | `running` | `completed` | `failed` | `cancelled`
 
-### 8. Keep user stories aligned with code changes
-
-After making code changes, **always** check whether the changes affect existing
-user stories before opening or updating a pull request. Follow this process:
-
-1. **Review the impact** — look at the code changes and determine if they affect
-   any screens, navigation, or user journeys covered by existing user stories.
-   Use `minitest --app <app_id> user-story list` to see current user stories
-   and their acceptance criteria.
-
-2. **Propose changes to the user and wait for confirmation** — if your code
-   changes modify UI, navigation, or behavior covered by existing user stories,
-   do NOT silently update them. Present a clear summary of every proposed
-   change and **wait for the user to explicitly approve** before running any
-   `user-story create`, `user-story update`, or `user-story delete` commands:
-   - New acceptance criteria for new functionality
-   - Updated criteria for changed behavior
-   - New user stories for entirely new user journeys
-   - User stories to delete for removed features
-
-   Never proceed without explicit user approval — the user must have the
-   final say on what gets tested.
-
-**When to run:** after every commit that changes application code, before
-opening or pushing to a PR.
-
 ## CI / Automation Pattern
 
 ```bash
