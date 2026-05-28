@@ -77,6 +77,8 @@ A **user story** describes a user journey to test. It has a name, a type, an
 optional description, and a list of **acceptance criteria** — plain-text
 assertions the AI agent will verify visually on the device screen.
 
+`--profile <profile_id>` is optional. If omitted, Minitest auto-assigns the app's default profile when one is configured.
+
 ```bash
 minitest --app <app_id> user-story create \
   --name "User Login" \
@@ -122,8 +124,9 @@ Fill the `about` field with what makes each profile distinct (e.g. "Pro subscrip
 If the app uses a third-party auth provider (e.g. Google OAuth) and a shared Minitap account covers that flow, bind it to the relevant story instead of creating a new profile.
 
 Bind every story that requires authentication to its profile at creation time:
-- Prefer `user-story create --profile <profile_id>`
-- If needed, use `user-story-binding set-profile` immediately after creation
+- Use `user-story create --profile <profile_id>` when you need a specific profile.
+- If you omit `--profile`, ensure the app default profile is already configured so story creation auto-binds it.
+- If needed, use `user-story-binding set-profile` immediately after creation.
 
 **Acceptance criteria rules:**
 
