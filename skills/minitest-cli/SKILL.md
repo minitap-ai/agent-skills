@@ -81,6 +81,7 @@ assertions the AI agent will verify visually on the device screen.
 minitest --app <app_id> user-story create \
   --name "User Login" \
   --type login \
+  --profile <profile_id> \
   --description "Email/password login from welcome screen" \
   --criteria "The login screen shows email and password fields" \
   --criteria "After submitting valid credentials, a loading indicator appears" \
@@ -98,6 +99,31 @@ minitest --app <app_id> user-story create \
 or account-specific state, ensure the user provides test credentials via the
 Minitest web app's test configuration. User stories should only cover journeys
 the test account can actually perform.
+
+### Test Profiles
+
+When generating user stories, create a test profile for every distinct role or subscription tier the app requires. Each profile represents a unique starting state the agent needs to run a story (e.g. "Free User", "Pro User", "Admin", "Driver").
+
+Use placeholder credentials so the user can configure them on their backend:
+- Username: `minitest-<role>@<appname>.app` (e.g. `minitest-pro@acme.app`)
+- Password: `MiniTest-<Role>-2024!`
+
+After creating profiles, clearly surface the credentials to the user in plain text so they can provision matching accounts in their system. Example:
+
+```text
+Created 2 test profiles:
+  - Free User: minitest-free@acme.app / MiniTest-Free-2024!
+  - Pro User:  minitest-pro@acme.app  / MiniTest-Pro-2024!
+Set these credentials in your backend so the agent can sign in during test runs.
+```
+
+Fill the `about` field with what makes each profile distinct (e.g. "Pro subscription active, has saved items, payment method on file"). This context is injected into the tester agent's prompt at run time.
+
+If the app uses a third-party auth provider (e.g. Google OAuth) and a shared Minitap account covers that flow, bind it to the relevant story instead of creating a new profile.
+
+Bind every story that requires authentication to its profile at creation time:
+- Prefer `user-story create --profile <profile_id>`
+- If needed, use `user-story-binding set-profile` immediately after creation
 
 **Acceptance criteria rules:**
 
@@ -338,6 +364,7 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | List apps           | `minitest apps list`                                                              |
 | Create app          | `minitest apps create --name "My App" [--tenant ID] [--description ...] [--slug ...] [--icon ./icon.png]` |
 | Create user story   | `minitest --app ID user-story create --name "..." --type login --criteria "..."` |
+| Create user story with profile | `minitest --app ID user-story create --name "..." --type login --profile <profile_id> --criteria "..."` |
 | List user stories   | `minitest --app ID user-story list`                                               |
 | Update user story   | `minitest --app ID user-story update <id> --add-criteria "..."`                   |
 | List flow types     | `minitest flow-types list`                                                        |
@@ -358,6 +385,8 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | List test profiles  | `minitest --app ID test-profile list`                                             |
 | List shared profiles| `minitest test-profile list-shared` (Minitap-provided pool; currently Google account only) |
 | Create test profile | `minitest --app ID test-profile create --name "..." --username "..." --password-stdin` |
+| Set default profile | `minitest --app ID test-profile set-default <profile_id>` |
+| Clear default profile | `minitest --app ID test-profile clear-default` |
 | Update test profile | `minitest --app ID test-profile update <id> [--name ...] [--clear-password]`      |
 | Delete test profile | `minitest --app ID test-profile delete <id> --force`                              |
 | List test files     | `minitest --app ID test-file list [--kind image\|document\|video\|audio\|other]`  |
