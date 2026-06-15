@@ -127,6 +127,8 @@ Bind every story that requires authentication to its profile at creation time:
 - Use `user-story create --profile <profile_id>` when you need a specific profile.
 - If you omit `--profile`, ensure the app default profile is already configured so story creation auto-binds it.
 - If needed, use `user-story-binding set-profile` immediately after creation.
+  `--profile` is repeatable and replaces the full set, so you can bind several
+  personas to one story (e.g. run the same flow as Free, Pro, and Admin).
 
 **Acceptance criteria rules:**
 
@@ -349,8 +351,8 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | Get test file       | `minitest --app ID test-file get <id>` (returns short-lived download URL)         |
 | Update test file    | `minitest --app ID test-file update <id> [--name ...] [--clear-note]`             |
 | Delete test file    | `minitest --app ID test-file delete <id> --force`                                 |
-| Bind profile to story | `minitest --app ID user-story-binding set-profile <story_id> --profile <id>`    |
-| Clear story profile | `minitest --app ID user-story-binding set-profile <story_id> --clear`             |
+| Bind profile(s) to story | `minitest --app ID user-story-binding set-profile <story_id> --profile <id> [--profile <id> ...]` (repeatable; replaces the full set) |
+| Clear story profiles | `minitest --app ID user-story-binding set-profile <story_id> --clear`             |
 | Bind files to story | `minitest --app ID user-story-binding set-files <story_id> --file <id> --file <id>` |
 | List story files    | `minitest --app ID user-story-binding list-files <story_id>`                      |
 
@@ -367,7 +369,10 @@ like profile photos, sample PDFs, or recordings the story under test depends on.
 
 Bindings link profiles or files to a specific user story:
 
-- Profile binding: at most one profile per story. `set-profile --clear` unbinds.
+- Profile binding: one or more profiles per story. `set-profile --profile` is
+  repeatable and is an **atomic replace** of the bound set (like `set-files`);
+  binding multiple personas runs the same story under each starting state.
+  `set-profile --clear` unbinds all.
 - File binding: many files per story. `set-files` is **atomic replace** — pass
   every file id you want bound; omitted ids are unbound. `--clear` unbinds all.
 
