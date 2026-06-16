@@ -90,6 +90,17 @@ minitest --app <app_id> user-story create \
   --criteria "The home screen is displayed after successful login"
 ```
 
+Use `--depends-on` to declare that this story must be run after another story
+completes successfully (repeatable for multiple parents):
+
+```bash
+minitest --app <app_id> user-story create \
+  --name "View Order History" \
+  --type navigation \
+  --depends-on <login_story_id> \
+  --criteria "The order history screen is displayed"
+```
+
 **User story types:** `login`, `registration`, `onboarding`, `search`,
 `settings`, `navigation`, `form`, `profile`, `other`, `custom`.
 
@@ -153,6 +164,29 @@ minitest --app <app_id> user-story delete <user_story_id> --force
 > unchanged content preserves identity (stable `criterionId`), modified content
 > creates a new version on the same criterion, and removed items are
 > soft-deleted. `--add-criteria` only appends.
+
+#### Story dependencies
+
+Use `--depends-on` / `--remove-dependency` on `user-story update` to manage
+which stories gate this one:
+
+```bash
+# Replace the full dependency set (all parents at once)
+minitest --app <app_id> user-story update <story_id> \
+  --depends-on <parent_id_1> --depends-on <parent_id_2>
+
+# Remove a single dependency without touching the others
+minitest --app <app_id> user-story update <story_id> \
+  --remove-dependency <parent_id>
+
+# Clear all dependencies (pass empty --depends-on list)
+minitest --app <app_id> user-story update <story_id> --depends-on ""
+```
+
+> `--depends-on` is a **full replace**: omitting a previously set parent removes
+> it. Use `--remove-dependency` for a surgical delta when you only want to drop
+> one parent. The two flags are mutually exclusive on the same invocation —
+> `--remove-dependency` is ignored when `--depends-on` is also provided.
 
 ### 3. Reading flow types and app knowledge
 
@@ -325,6 +359,8 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | Create user story with profile | `minitest --app ID user-story create --name "..." --type login --profile <profile_id> --criteria "..."` |
 | List user stories   | `minitest --app ID user-story list`                                               |
 | Update user story   | `minitest --app ID user-story update <id> --add-criteria "..."`                   |
+| Set story dependencies | `minitest --app ID user-story update <id> --depends-on <parent_id> [--depends-on <parent_id2>]` |
+| Remove a dependency | `minitest --app ID user-story update <id> --remove-dependency <parent_id>`        |
 | List flow types     | `minitest flow-types list`                                                        |
 | Read app knowledge  | `minitest app-knowledge get --app ID`                                             |
 | Update app knowledge| `minitest app-knowledge update --app ID --content-file ./knowledge.md`            |
