@@ -45,8 +45,8 @@ results.
 ### 1. Identify the app
 
 ```bash
-minitest apps list                # find your app ID
-minitest --json apps list         # JSON array of {id, name, tenantId}
+minitest apps list                # find your app ID; the Platform column lists each app's lanes
+minitest --json apps list         # JSON array of {id, name, tenantId, platforms, webUrl}
 ```
 
 #### Creating apps
@@ -56,16 +56,24 @@ lives under a tenant; when the authenticated user belongs to a single
 tenant the CLI auto-resolves it, otherwise pass `--tenant <id>` explicitly
 (`apps list` exposes existing tenant IDs in JSON mode).
 
-```bash
-# Auto-resolve tenant (single-tenant users)
-minitest apps create --name "My App"
+Every app declares one or more **platform lanes** via `--platform`
+(`ios`, `android`, or `web`); pass the flag once per lane. At least one is
+required. For a web lane, also pass `--web-url` (the URL the app is reachable
+at); the app's default web targets — browser/viewport combinations — are
+configured in the Minitest web app and resolved server-side at run time.
 
-# Explicit tenant; print just the new app id on stdout
-minitest apps create --tenant <tenant_id> --name "My App"
+```bash
+# Single mobile lane (auto-resolve tenant for single-tenant users)
+minitest apps create --name "My App" --platform ios
+
+# Multiple lanes, including web
+minitest apps create --tenant <tenant_id> --name "My App" \
+  --platform ios --platform android --platform web \
+  --web-url "https://app.example.com"
 
 # Full record as JSON, suitable for piping
 minitest --json apps create --tenant <tenant_id> --name "My App" \
-  --description "Mobile companion" --slug "my-app" --icon ./icon.png
+  --platform ios --description "Mobile companion" --slug "my-app" --icon ./icon.png
 ```
 
 In a multi-tenant non-interactive context (CI, piped invocation), `--tenant`
@@ -254,8 +262,16 @@ minitest --app <app_id> build list
 
 ### 5. Run tests
 
-Execute a user story on virtual devices. Provide at least one of
-`--ios-build` or `--android-build`; single-platform apps may omit the other.
+Execute a user story against one or more **lanes**. Select lanes with
+`--ios-build` / `--android-build` (a mobile build per native lane) and `--web`
+(the app's configured web targets). At least one lane is required; a web-only
+run needs no mobile build.
+
+The `--web` flag includes the app's **default web targets** (browser/viewport
+combinations configured in the Minitest web app and resolved server-side). The
+CLI cannot override web targets per run — per-run url/browser/viewport
+overrides are a CI-only feature. If `--web` is selected for an app with no web
+configuration, the server rejects the run and the error is surfaced verbatim.
 
 ```bash
 # Run a single user story (by name or UUID) and wait for results
@@ -267,6 +283,13 @@ minitest --app <app_id> run start "User Login" \
 minitest --app <app_id> run start "User Login" \
   --android-build <android_build_id>
 
+# Web lane only (no mobile build needed)
+minitest --app <app_id> run start "User Login" --web
+
+# Native + web in one run
+minitest --app <app_id> run start "User Login" \
+  --ios-build <ios_build_id> --web
+
 # Fire-and-forget (returns runId immediately — useful in CI)
 minitest --app <app_id> --json run start "User Login" \
   --ios-build <ios_build_id> \
@@ -276,7 +299,8 @@ minitest --app <app_id> --json run start "User Login" \
 # Run ALL user stories at once (creates one batch, fire-and-forget)
 minitest --app <app_id> run all \
   --ios-build <ios_build_id> \
-  --android-build <android_build_id>
+  --android-build <android_build_id> \
+  --web
 
 # Cancel a running or pending run
 minitest --app <app_id> run cancel <run_id>
@@ -302,8 +326,9 @@ minitest --app <app_id> run list "User Login" --all
 
 **Run statuses:** `pending` → `running` → `completed` | `failed` | `cancelled`
 
-A completed run includes per-platform results: pass/fail for each acceptance
-criterion, fail reasons, and recording URLs.
+A completed run includes per-target results: pass/fail for each acceptance
+criterion, fail reasons, and recording URLs. Targets are labelled by lane —
+`iOS`, `Android`, or a web target such as `Chrome · Mobile`.
 
 ### 7. Work with batches
 
@@ -333,9 +358,11 @@ minitest --json build upload ./MyApp.ipa
 IOS_BUILD=$(minitest --json build list --platform ios --page-size 1 | jq -r '.[0].id')
 ANDROID_BUILD=$(minitest --json build list --platform android --page-size 1 | jq -r '.[0].id')
 
+# Add --web to also run the app's configured web targets
 minitest --json run all \
   --ios-build "$IOS_BUILD" \
-  --android-build "$ANDROID_BUILD"
+  --android-build "$ANDROID_BUILD" \
+  --web
 ```
 
 ## JSON Output
@@ -354,7 +381,7 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | Task                | Command                                                                           |
 | ------------------- | --------------------------------------------------------------------------------- |
 | List apps           | `minitest apps list`                                                              |
-| Create app          | `minitest apps create --name "My App" [--tenant ID] [--description ...] [--slug ...] [--icon ./icon.png]` |
+| Create app          | `minitest apps create --name "My App" --platform ios [--platform web --web-url URL] [--tenant ID] [--description ...] [--slug ...] [--icon ./icon.png]` |
 | Create user story   | `minitest --app ID user-story create --name "..." --type login --criteria "..."` |
 | Create user story with profile | `minitest --app ID user-story create --name "..." --type login --profile <profile_id> --criteria "..."` |
 | List user stories   | `minitest --app ID user-story list`                                               |
@@ -366,8 +393,8 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | Update app knowledge| `minitest app-knowledge update --app ID --content-file ./knowledge.md`            |
 | Upload build        | `minitest --app ID build upload ./app.apk`                                        |
 | List builds         | `minitest --app ID build list`                                                    |
-| Run one user story  | `minitest --app ID run start "Story Name" --ios-build X --android-build Y`        |
-| Run all user stories| `minitest --app ID run all --ios-build X --android-build Y`                       |
+| Run one user story  | `minitest --app ID run start "Story Name" --ios-build X --android-build Y [--web]` |
+| Run all user stories| `minitest --app ID run all --ios-build X --android-build Y [--web]`               |
 | Cancel a run        | `minitest --app ID run cancel <run_id>`                                           |
 | Check run           | `minitest --app ID run status <run_id>`                                           |
 | List runs for story | `minitest --app ID run list "Story Name"`                                         |
