@@ -23,6 +23,37 @@ results.
 - Set target app: `export MINITEST_APP_ID=<uuid>` or pass `--app <uuid>` before
   any subcommand
 
+## Authentication
+
+Three credential sources, in priority order:
+
+1. `MINITEST_TOKEN` — raw bearer override (legacy; usually unset).
+2. `MINITEST_API_KEY` — tenant-scoped `mtk_…` key, recommended for CI/scripts.
+3. `minitest auth login` — interactive OAuth.
+
+If both `MINITEST_TOKEN` and `MINITEST_API_KEY` are set, `MINITEST_TOKEN` wins and a stderr warning is emitted once per process.
+
+### Key rotation
+
+`mtk_` keys are mintable and revocable but do not expire. To rotate: mint a new key, update the secret in your CI/orchestrator, then revoke the old key:
+
+```
+minitest auth api-key mint --tenant <tenant-id> --name new-ci
+minitest auth api-key list --tenant <tenant-id>
+minitest auth api-key revoke --tenant <tenant-id> --key <old-key-id>
+```
+
+### CI usage
+
+```yaml
+env:
+  MINITEST_API_KEY: ${{ secrets.MINITEST_API_KEY }}
+steps:
+  - run: minitest apps list
+```
+
+Treat `MINITEST_API_KEY` as a credential. Never commit it; rotate on suspected leak.
+
 ## Global Flags
 
 | Flag         | Effect                                                                      |
@@ -393,6 +424,9 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | Get batch + runs    | `minitest --app ID batch get <batch_id>`                                          |
 | Cancel batch        | `minitest --app ID batch cancel <batch_id>`                                       |
 | Auth                | `minitest auth login`                                                             |
+| Mint API key        | `minitest auth api-key mint --tenant <id> --name <label>` (OAuth only)            |
+| List API keys       | `minitest auth api-key list --tenant <id>`                                        |
+| Revoke API key      | `minitest auth api-key revoke --tenant <id> --key <id>`                           |
 | List test profiles  | `minitest --app ID test-profile list`                                             |
 | List shared profiles| `minitest test-profile list-shared` (Minitap-provided pool; currently Google account only) |
 | Create test profile | `minitest --app ID test-profile create --name "..." --username "..." --password-stdin` |
