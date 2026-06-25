@@ -37,8 +37,14 @@ minitest init            # prints the onboarding playbook (raw markdown when pip
 minitest init --agent    # force raw markdown output regardless of context
 ```
 
-Two conventions the playbook relies on:
+Conventions the playbook relies on:
 
+- **Map all the main paths**: enumerate ALL the key user journeys the app
+  genuinely warrants, not just a sample. Cover the happy paths AND, especially,
+  the paths that can break: failure states, validation errors, permission/auth
+  denials, empty states, and edge cases — these are what real testing must catch.
+  Write goal-oriented acceptance criteria (each criterion is a job to be done,
+  not a micro-step).
 - **Offline criteria**: word them as "Offline (wifi off)" — the cloud test devices
   have no airplane mode, so never write "airplane mode".
 - **File seeding**: if a scenario needs a file on the device, `minitest test-file
