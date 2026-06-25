@@ -23,6 +23,29 @@ results.
 - Set target app: `export MINITEST_APP_ID=<uuid>` or pass `--app <uuid>` before
   any subcommand
 
+## Onboarding a new app (`minitest init`)
+
+If you are onboarding an app from scratch, run `minitest init` first. It prints
+an end-to-end onboarding playbook — the ordered steps to take this app from
+nothing to a wired test suite: authenticate, find/create the app, define personas
+(test profiles), map user journeys, create scenarios with wired dependencies,
+upload a virtual-device build, and run the suite. Follow the printed steps in
+order, in the app's repository.
+
+```bash
+minitest init            # prints the onboarding playbook (raw markdown when piped/non-interactive)
+minitest init --agent    # force raw markdown output regardless of context
+```
+
+Two conventions the playbook relies on:
+
+- **Offline criteria**: word them as "Offline (wifi off)" — the cloud test devices
+  have no airplane mode, so never write "airplane mode".
+- **File seeding**: if a scenario needs a file on the device, `minitest test-file
+  upload` it and bind it with `minitest user-story-binding set-files` before runs.
+
+The sections below document each command the playbook refers to.
+
 ## Authentication
 
 Three credential sources, in priority order:
@@ -401,6 +424,7 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 
 | Task                | Command                                                                           |
 | ------------------- | --------------------------------------------------------------------------------- |
+| Onboard a new app   | `minitest init` (prints the end-to-end onboarding playbook)                       |
 | List apps           | `minitest apps list`                                                              |
 | App dependency graph| `minitest apps dependencies <app_id>` (Mermaid flowchart to stdout)               |
 | Create app          | `minitest apps create --name "My App" [--tenant ID] [--description ...] [--slug ...] [--icon ./icon.png]` |
