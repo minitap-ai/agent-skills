@@ -196,22 +196,30 @@ the test account can actually perform.
 
 When generating user stories, create a test profile for every distinct role or subscription tier the app requires. Each profile represents a unique starting state the agent needs to run a story (e.g. "Free User", "Pro User", "Admin", "Driver").
 
-Use placeholder credentials so the user can configure them on their backend:
-- Username: `minitest-<role>@<appname>.app` (e.g. `minitest-pro@acme.app`)
-- Password: `MiniTest-<Role>-2024!`
+**Default to email-OTP personas.** Give each profile a `<prefix>@qa.minitap.ai` username and NO password. Every `@qa.minitap.ai` address delivers into a shared inbox the tester agent reads at run time, so it can sign in (or sign up) by pulling the login/verification code itself — no real credentials to manage:
 
-After creating profiles, clearly surface the credentials to the user in plain text so they can provision matching accounts in their system. Example:
-
-```text
-Created 2 test profiles:
-  - Free User: minitest-free@acme.app / MiniTest-Free-2024!
-  - Pro User:  minitest-pro@acme.app  / MiniTest-Pro-2024!
-Set these credentials in your backend so the agent can sign in during test runs.
+```bash
+minitest --app $APP test-profile create \
+  --name "Pro User" --username "pro@qa.minitap.ai" \
+  --about "Pro subscription active, has saved items, payment method on file"
 ```
+
+A non-`@qa.minitap.ai` username with no password is rejected — keep the domain (or leave the username blank to auto-generate one).
+
+**Bring-your-own account.** Only when the user supplies a real account they own (and the app needs a password) pass both, via stdin:
+
+```bash
+printf "%s" "$PASSWORD" | minitest --app $APP test-profile create \
+  --name "Pro User" --username "real-user@example.com" --password-stdin --about "..."
+```
+
+**Specific account state (e.g. premium).** To exercise a flow that needs a particular state, proactively create a `<something>@qa.minitap.ai` persona WITH an explicit password, then ask the user to link that exact email+password combo to a pro/specific-state account in their backend. The `@qa.minitap.ai` address keeps the inbox readable for any OTP while the password lets them pre-provision the account state.
+
+**No persona bound.** If a story has no profile, the agent defaults to anonymous (skip login). If a flow forces authentication, it self-generates a `<random>@qa.minitap.ai` with a runtime password, signs up, and reads the inbox for the confirmation/OTP code — so unbound scenarios still work without you provisioning anything.
 
 Fill the `about` field with what makes each profile distinct (e.g. "Pro subscription active, has saved items, payment method on file"). This context is injected into the tester agent's prompt at run time.
 
-If the app uses a third-party auth provider (e.g. Google OAuth) and a shared Minitap account covers that flow, bind it to the relevant story instead of creating a new profile.
+If the app uses a third-party auth provider (e.g. Google OAuth), a shared Minitap account covers that flow — bind it to the relevant story instead of creating a new profile. Those shared pool addresses are also `@qa.minitap.ai`, so their inboxes are readable the same way.
 
 Bind every story that requires authentication to its profile at creation time:
 - Use `user-story create --profile <profile_id>` when you need a specific profile.
