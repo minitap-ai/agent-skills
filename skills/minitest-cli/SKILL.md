@@ -451,6 +451,11 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | List flow types     | `minitest flow-types list`                                                        |
 | Read app knowledge  | `minitest app-knowledge get --app ID`                                             |
 | Update app knowledge| `minitest app-knowledge update --app ID --content-file ./knowledge.md`            |
+| List env vars       | `minitest --app ID env list` (values masked; `--show` reveals)                    |
+| Reveal one env var  | `minitest --app ID env get <KEY>` (prints the value verbatim to stdout)           |
+| Set an env var      | `minitest --app ID env set <KEY> <VALUE> --yes [--dry-run]`                       |
+| Remove an env var   | `minitest --app ID env unset <KEY> --yes [--dry-run]`                             |
+| Clear all env vars  | `minitest --app ID env clear --yes [--dry-run]`                                   |
 | Upload build        | `minitest --app ID build upload ./app.apk`                                        |
 | List builds         | `minitest --app ID build list`                                                    |
 | Run one user story  | `minitest --app ID run start "Story Name" --ios-build X --android-build Y`        |
@@ -498,6 +503,41 @@ Bindings link profiles or files to a specific user story:
 - Profile binding: at most one profile per story. `set-profile --clear` unbinds.
 - File binding: many files per story. `set-files` is **atomic replace** — pass
   every file id you want bound; omitted ids are unbound. `--clear` unbinds all.
+
+## Environment variables
+
+Apps can carry a set of environment variables (`KEY=value` pairs) that the test
+runtime injects. They are app-scoped and stored encrypted server-side. Manage
+them with the `env` group; every command needs an app (`--app ID` or
+`MINITEST_APP_ID`).
+
+```bash
+minitest --app $APP env list            # values masked as ******** by default
+minitest --app $APP env list --show     # reveal every value
+minitest --app $APP env get API_TOKEN   # print ONE value verbatim to stdout
+```
+
+`env list` masks values so a screen-share or log never leaks a secret. `env get`
+is the deliberate single-value reveal — it prints the raw value (and nothing
+else) to stdout, so `VALUE=$(minitest --app $APP env get API_TOKEN)` is safe to
+script.
+
+Writes are **read-merge-write**: `set`/`unset` fetch the current set, apply your
+change, and send the full map back, so they never clobber the other keys. Every
+mutating command (`set`, `unset`, `clear`) requires explicit `--yes`/`-y` — it
+never prompts. Without `--yes` it refuses and exits non-zero, which keeps an
+agent or CI job from mutating secrets by accident.
+
+```bash
+minitest --app $APP env set API_TOKEN abc123 --yes
+minitest --app $APP env set API_TOKEN abc123 --dry-run   # show the diff, change nothing
+minitest --app $APP env unset OLD_KEY --yes
+minitest --app $APP env clear --yes                      # deletes ALL env vars for the app
+```
+
+Use `--dry-run` first when unsure: it prints the added/changed/removed keys
+(`+`/`~`/`-`) without touching the backend. `unset` a missing key and `clear`
+with nothing configured both exit `4` (not found).
 
 ### Passwords on the CLI
 
