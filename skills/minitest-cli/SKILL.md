@@ -52,6 +52,52 @@ Conventions the playbook relies on:
 
 The sections below document each command the playbook refers to.
 
+## Maintaining existing tests (`minitest maintenance`)
+
+Use `minitest maintenance` when the app UI/code changed and the customer wants
+their Minitest user stories updated without sharing GitHub/code with Minitap.
+Run it from the app repository. The customer's own coding agent reads local code;
+the CLI sends only proposed test-flow edits and an opaque local HEAD SHA.
+
+```bash
+# Fetch the server-composed maintenance brain (same rules as cloud maintenance)
+minitest maintenance --agent
+
+# First agent step: opens a maintenance run and returns context as JSON
+minitest --json maintenance context
+```
+
+The `context` output includes:
+
+- `mode`: `audit` on the first run, `incremental` after a watermark exists
+- `fromSha`: null in audit mode; diff baseline in incremental mode
+- `headSha`: local HEAD SHA reported by the CLI
+- `context`: current stories, stable criterion ids, dependencies, app memory
+- `guardrail`: pending Release Queue count; warn the user before continuing when non-zero
+
+In incremental mode, inspect changes with `git diff <fromSha>..HEAD` locally.
+In audit mode, inspect the full current codebase against every active story.
+
+Post findings back through these mechanics-only commands:
+
+```bash
+minitest maintenance affected --file affected.json
+minitest maintenance change --file change.json
+minitest maintenance divergence --file divergence.json
+minitest maintenance status --phase triage --message "Mapped affected stories" --progress 40
+minitest maintenance complete --changed      # or --no-changed when nothing changed
+```
+
+At the end, either apply the queued edits immediately or hand the user a review link:
+
+```bash
+minitest maintenance apply          # materializes all pending maintenance edits
+minitest maintenance apply --review # prints the Release Queue link, no mutation
+```
+
+Never ask the user to paste code or diffs into Minitap. The privacy contract is:
+local code stays local; proposed criteria/dependency edits are the only payload.
+
 ## Authentication
 
 Three credential sources, in priority order:
@@ -439,6 +485,11 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | Task                | Command                                                                           |
 | ------------------- | --------------------------------------------------------------------------------- |
 | Onboard a new app   | `minitest init` (prints the end-to-end onboarding playbook)                       |
+| Maintain tests locally | `minitest maintenance --agent` (prints the CLI maintenance playbook)           |
+| Open maintenance run | `minitest --json maintenance context`                                            |
+| Post maintenance change | `minitest maintenance change --file change.json`                              |
+| Complete maintenance run | `minitest maintenance complete --changed`                                    |
+| Apply maintenance edits | `minitest maintenance apply` or `minitest maintenance apply --review`          |
 | List apps           | `minitest apps list`                                                              |
 | App dependency graph| `minitest apps dependencies <app_id>` (Mermaid flowchart to stdout)               |
 | Create app          | `minitest apps create --name "My App" [--tenant ID] [--description ...] [--slug ...] [--icon ./icon.png]` |
