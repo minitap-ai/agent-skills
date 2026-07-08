@@ -94,12 +94,18 @@ follow that contract rather than inventing field names. `complete --changed` is
 what advances the watermark to the current HEAD, so the next run resolves to
 `incremental` mode; use `--no-changed` when nothing was edited.
 
-At the end, either apply the queued edits immediately or hand the user a review link:
+At the end, always show the user the Release Queue review link so they can inspect
+the proposed edits in the webapp, and offer to apply them right away — it is one
+flow, not two modes:
 
 ```bash
-minitest maintenance apply          # materializes all pending maintenance edits
-minitest maintenance apply --review # prints the Release Queue link, no mutation
+minitest maintenance apply --review # prints the Release Queue link (no changes made)
+minitest maintenance apply          # applies all pending edits now
 ```
+
+Present it as a single choice: surface the review link, then ask whether the user
+wants you to apply the edits now or review them manually through the link first.
+Auto-applying is simply the option they can pick, not a separate mode.
 
 Never ask the user to paste code or diffs into Minitap. The privacy contract is:
 local code stays local; proposed criteria/dependency edits are the only payload.
