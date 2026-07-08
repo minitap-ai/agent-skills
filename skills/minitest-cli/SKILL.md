@@ -88,6 +88,12 @@ minitest maintenance status --phase triage --message "Mapped affected stories" -
 minitest maintenance complete --changed      # or --no-changed when nothing changed
 ```
 
+The exact JSON fields for `affected.json`, `change.json`, and `divergence.json`
+are specified by the maintenance brain fetched via `minitest maintenance --agent`;
+follow that contract rather than inventing field names. `complete --changed` is
+what advances the watermark to the current HEAD, so the next run resolves to
+`incremental` mode; use `--no-changed` when nothing was edited.
+
 At the end, either apply the queued edits immediately or hand the user a review link:
 
 ```bash
