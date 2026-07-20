@@ -1,20 +1,21 @@
 ---
 name: minitest-cli
 description: >
-  Use the minitest CLI to manage user stories, upload builds, execute test runs
-  on virtual devices (simulators/emulators), and analyse results. Use when the user asks to test
-  their mobile app, create test scenarios, run tests, check test results, or
-  manage builds via the command line. Also use after any code change that
+  Use the minitest CLI to manage user stories, upload native builds, execute
+  mobile and web app test runs, and analyse results. Use when the user asks to test
+  their mobile or web app, create test scenarios, run tests, check test results, or
+  manage native builds via the command line. Also use after any code change that
   affects UI, navigation, or user journeys to check if existing tests need
   to be updated.
 ---
 
 # Minitest CLI
 
-`minitest` is a command-line tool for automated mobile app testing on virtual
-devices (simulators & emulators). An AI agent analyses the app screen and verifies acceptance criteria
-you define. You manage everything through the CLI: user stories, builds, runs, batches, and
-results.
+`minitest` is a command-line tool for automated mobile and web app testing. For
+native apps it runs on virtual devices (simulators & emulators); for web apps it
+runs browser-based targets configured on the app. An AI agent analyses the app
+screen and verifies acceptance criteria you define. You manage everything through
+the CLI: user stories, native builds, web lanes, runs, batches, and results.
 
 ## Prerequisites
 
@@ -28,9 +29,10 @@ results.
 If you are onboarding an app from scratch, run `minitest init` first. It prints
 an end-to-end onboarding playbook — the ordered steps to take this app from
 nothing to a wired test suite: authenticate, find/create the app, define personas
-(test profiles), map user journeys, create scenarios with wired dependencies,
-upload a virtual-device build, and run the suite. Follow the printed steps in
-order, in the app's repository.
+(test profiles), map user journeys, and create scenarios with wired dependencies.
+The current playbook then hands off to the Minitest web app to collect any needed
+native build and launch the suite. Follow the printed steps in order, in the
+app's repository.
 
 ```bash
 minitest init            # prints the onboarding playbook (raw markdown when piped/non-interactive)
@@ -45,10 +47,11 @@ Conventions the playbook relies on:
   denials, empty states, and edge cases — these are what real testing must catch.
   Write goal-oriented acceptance criteria (each criterion is a job to be done,
   not a micro-step).
-- **Offline criteria**: word them as "Offline (wifi off)" — the cloud test devices
-  have no airplane mode, so never write "airplane mode".
-- **File seeding**: if a scenario needs a file on the device, `minitest test-file
-  upload` it and bind it with `minitest user-story-binding set-files` before runs.
+- **Offline criteria**: word them as "Offline (wifi off)" — mobile cloud test
+  devices have no airplane mode, so never write "airplane mode".
+- **File seeding**: if a scenario needs a file available in the test environment,
+  `minitest test-file upload` it and bind it with
+  `minitest user-story-binding set-files` before runs.
 
 The sections below document each command the playbook refers to.
 
@@ -194,15 +197,17 @@ tenant the CLI auto-resolves it, otherwise pass `--tenant <id>` explicitly
 (`apps list` exposes existing tenant IDs in JSON mode).
 
 ```bash
-# Auto-resolve tenant (single-tenant users)
-minitest apps create --name "My App"
+# Auto-resolve tenant (single-tenant users), native mobile app
+minitest apps create --name "My Mobile App" --platform ios --platform android
 
 # Explicit tenant; print just the new app id on stdout
-minitest apps create --tenant <tenant_id> --name "My App"
+minitest apps create --tenant <tenant_id> --name "My Web App" \
+  --platform web --web-url https://example.com
 
 # Full record as JSON, suitable for piping
 minitest --json apps create --tenant <tenant_id> --name "My App" \
-  --description "Mobile companion" --slug "my-app" --icon ./icon.png
+  --platform web --web-url https://example.com \
+  --description "Customer portal" --slug "my-app" --icon ./icon.png
 ```
 
 In a multi-tenant non-interactive context (CI, piped invocation), `--tenant`
@@ -212,7 +217,8 @@ is required: the command exits 1 with a clear error otherwise.
 
 A **user story** describes a user journey to test. It has a name, a type, an
 optional description, and a list of **acceptance criteria** — plain-text
-assertions the AI agent will verify visually on the device screen.
+assertions the AI agent will verify visually on the target screen (mobile device
+or browser).
 
 `--profile <profile_id>` is optional. If omitted, Minitest auto-assigns the app's default profile when one is configured.
 
@@ -370,10 +376,12 @@ minitest app-knowledge update --app <app_id> --content-file ./app-knowledge.md
 prints the new `versionNumber` to stdout (full record with `--json`). Each
 update creates a new prompt version — there is no rollback shortcut.
 
-### 4. Upload builds
+### 4. Upload native builds
 
-Upload your `.apk` (Android) or `.ipa` (iOS) build artifacts. The platform is
-auto-detected from the file extension. Only `.apk` and `.ipa` files are supported.
+For iOS/Android apps, upload your `.apk` (Android) or `.ipa` (iOS) build
+artifacts. The platform is auto-detected from the file extension. Only `.apk`
+and `.ipa` files are supported. Web apps do **not** upload builds; create the app
+with `--platform web --web-url ...` and run the web lane with `--web`.
 
 > **Important — virtual-device builds required:**
 >
@@ -397,8 +405,12 @@ minitest --app <app_id> build list
 
 ### 5. Run tests
 
-Execute a user story on virtual devices. Provide at least one of
-`--ios-build` or `--android-build`; single-platform apps may omit the other.
+Execute a user story on either native lanes or the web lane. For native runs,
+provide at least one of `--ios-build` or `--android-build`; single-platform apps
+may omit the other. For web runs, pass `--web` by itself — do **not** combine it
+with native build flags. Web runs use the app's configured web URL and default web
+targets; there are no per-run `--web-url`, `--browser`, or `--viewport` overrides
+in the CLI.
 
 ```bash
 # Run a single user story (by name or UUID) and wait for results
@@ -410,6 +422,9 @@ minitest --app <app_id> run start "User Login" \
 minitest --app <app_id> run start "User Login" \
   --android-build <android_build_id>
 
+# Web app (no build upload needed)
+minitest --app <app_id> run start "User Login" --web
+
 # Fire-and-forget (returns runId immediately — useful in CI)
 minitest --app <app_id> --json run start "User Login" \
   --ios-build <ios_build_id> \
@@ -420,6 +435,9 @@ minitest --app <app_id> --json run start "User Login" \
 minitest --app <app_id> run all \
   --ios-build <ios_build_id> \
   --android-build <android_build_id>
+
+# Run ALL user stories on web targets only
+minitest --app <app_id> run all --web
 
 # Cancel a running or pending run
 minitest --app <app_id> run cancel <run_id>
@@ -445,7 +463,7 @@ minitest --app <app_id> run list "User Login" --all
 
 **Run statuses:** `pending` → `running` → `completed` | `failed` | `cancelled`
 
-A completed run includes per-platform results: pass/fail for each acceptance
+A completed run includes per-target results: pass/fail for each acceptance
 criterion, fail reasons, and recording URLs.
 
 ### 7. Work with batches
@@ -467,7 +485,7 @@ minitest --app <app_id> batch cancel <batch_id>         # cancels all pending/ru
 ## CI / Automation Pattern
 
 ```bash
-# Upload builds, run all user stories, collect results
+# Native CI: upload builds, run all user stories, collect results
 export MINITEST_APP_ID="<app_id>"
 
 minitest --json build upload ./app.apk
@@ -479,6 +497,9 @@ ANDROID_BUILD=$(minitest --json build list --platform android --page-size 1 | jq
 minitest --json run all \
   --ios-build "$IOS_BUILD" \
   --android-build "$ANDROID_BUILD"
+
+# Web CI: no build upload; use configured web targets
+minitest --json run all --web
 ```
 
 ## JSON Output
@@ -504,7 +525,8 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | Apply maintenance edits | `minitest maintenance apply` or `minitest maintenance apply --review`          |
 | List apps           | `minitest apps list`                                                              |
 | App dependency graph| `minitest apps dependencies <app_id>` (Mermaid flowchart to stdout)               |
-| Create app          | `minitest apps create --name "My App" [--tenant ID] [--description ...] [--slug ...] [--icon ./icon.png]` |
+| Create native app   | `minitest apps create --name "My App" --platform ios --platform android [--tenant ID] [--description ...] [--slug ...] [--icon ./icon.png]` |
+| Create web app      | `minitest apps create --name "My Web App" --platform web --web-url https://example.com [--tenant ID]` |
 | Create user story   | `minitest --app ID user-story create --name "..." --type login --criteria "..."` |
 | Create user story with profile | `minitest --app ID user-story create --name "..." --type login --profile <profile_id> --criteria "..."` |
 | List user stories   | `minitest --app ID user-story list`                                               |
@@ -519,10 +541,12 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | Set an env var      | `minitest --app ID env set <KEY> <VALUE> --yes [--dry-run]`                       |
 | Remove an env var   | `minitest --app ID env unset <KEY> --yes [--dry-run]`                             |
 | Clear all env vars  | `minitest --app ID env clear --yes [--dry-run]`                                   |
-| Upload build        | `minitest --app ID build upload ./app.apk`                                        |
+| Upload native build | `minitest --app ID build upload ./app.apk`                                        |
 | List builds         | `minitest --app ID build list`                                                    |
-| Run one user story  | `minitest --app ID run start "Story Name" --ios-build X --android-build Y`        |
-| Run all user stories| `minitest --app ID run all --ios-build X --android-build Y`                       |
+| Run one native story| `minitest --app ID run start "Story Name" --ios-build X --android-build Y`        |
+| Run one web story   | `minitest --app ID run start "Story Name" --web`                                 |
+| Run all native stories | `minitest --app ID run all --ios-build X --android-build Y`                    |
+| Run all web stories | `minitest --app ID run all --web`                                                 |
 | Cancel a run        | `minitest --app ID run cancel <run_id>`                                           |
 | Check run           | `minitest --app ID run status <run_id>`                                           |
 | List runs for story | `minitest --app ID run list "Story Name"`                                         |
@@ -558,8 +582,9 @@ profiles are Minitap-provided accounts available to all test-enabled tenants and
 surface via `list-shared` (currently only a Google account).
 
 Test files are arbitrary blobs (max 25 MB; image/video/audio/document/other) that
-get pushed to the device before the agent runs the story. Use them for things
-like profile photos, sample PDFs, or recordings the story under test depends on.
+get pushed into the test environment before the agent runs the story. Use them
+for things like profile photos, sample PDFs, or recordings the story under test
+depends on.
 
 Bindings link profiles or files to a specific user story:
 
