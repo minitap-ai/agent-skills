@@ -8,12 +8,12 @@ Skills follow the [Agent Skills](https://agentskills.io/) format.
 
 ### minitest-cli
 
-Manage Minitest testing flows, upload builds, and execute test runs via the `minitest` CLI.
+Manage Minitest testing flows, upload native builds, and execute mobile/web test runs via the `minitest` CLI.
 
 Use when:
 - "Create testing flows for my app"
-- "Run mobile tests"
-- "Upload build"
+- "Run mobile or web tests"
+- "Upload native build"
 - After code changes that affect UI or user journeys
 
 ## Installation

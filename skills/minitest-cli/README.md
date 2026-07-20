@@ -1,6 +1,6 @@
 # Minitest CLI
 
-Use the minitest CLI to manage testing flows, upload builds, execute test runs on real mobile devices, and analyse results.
+Use the minitest CLI to manage testing flows, upload native builds, execute mobile and web app test runs, and analyse results.
 
 ## Overview
 
@@ -8,8 +8,9 @@ This skill teaches AI agents how to use the `minitest` command-line tool. Where 
 
 ## Use Cases
 
-- "Run my mobile app tests"
-- "Upload a build and start a test run"
+- "Run my mobile or web app tests"
+- "Upload a native build and start a test run"
+- "Run my web app tests from the CLI"
 - "Create testing flows via the CLI"
 - "Check test results for my app"
 - "Set up minitest in CI"
@@ -18,8 +19,8 @@ This skill teaches AI agents how to use the `minitest` command-line tool. Where 
 
 1. **Guides CLI installation and authentication** (`curl -fsSL .../install.sh | bash`, `minitest auth login`)
 2. **Manages testing flows** — create, list, update, and delete flows with acceptance criteria
-3. **Handles build uploads** — upload `.apk` / `.ipa` artifacts
-4. **Runs tests on virtual devices** — start runs, watch progress, collect results
+3. **Handles native build uploads** — upload `.apk` / `.ipa` artifacts for Android/iOS apps
+4. **Runs tests on mobile and web targets** — start runs, watch progress, collect results
 5. **Supports CI/automation** — JSON output mode, exit codes, scripting patterns
 
 ## Requirements
