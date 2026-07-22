@@ -492,6 +492,32 @@ Single-user journeys (login, checkout, navigation) should stay on auto. `list`
 and `get` show the effective device count when it is greater than 1; omitting
 `--device-count` on create leaves the story on auto.
 
+#### Camera media (web runs)
+
+Use `--camera-media` on `user-story create` or `user-story update` to feed a
+specific image or video into the virtual webcam during web runs (e.g. a story
+that uploads an ID photo or scans a QR code). The value is either a **local
+file path** to upload or an **existing test-file ID** to reuse:
+
+```bash
+# Upload a local image/video and attach it to a new story
+minitest --app <app_id> user-story create \
+  --name "Scan QR to check in" --type navigation \
+  --camera-media ./fixtures/checkin-qr.png
+
+# Reuse an already-uploaded test file by its ID
+minitest --app <app_id> user-story update <story_id> \
+  --camera-media <test_file_id>
+
+# Reset the story back to the built-in default camera feed
+minitest --app <app_id> user-story update <story_id> --clear-camera-media
+```
+
+> A **UUID** value is treated as an existing test-file ID and reused as-is; any
+> other value is a **local path** that gets uploaded as a test file first. The
+> file must be an image or video within the size caps — **video ≤ 50 MB, image
+> ≤ 25 MB**. `--camera-media` and `--clear-camera-media` are mutually exclusive.
+
 ### 3. Reading and managing flow types, and app knowledge
 
 > Needs **minitest-cli ≥ 0.22.0**. On an older CLI the `create` / `update` /
@@ -951,6 +977,8 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Set story dependencies | `minitest --json --app ID user-story update <id> --depends-on <parent_id> [--depends-on <parent_id2>]` |
 | Remove a dependency | `minitest --json --app ID user-story update <id> --remove-dependency <parent_id>`        |
 | Set story device count | `minitest --json --app ID user-story update <id> --device-count 2` (or `auto` to reset) |
+| Set story camera media | `minitest --json --app ID user-story update <id> --camera-media <path-or-file-id>` (video ≤ 50 MB / image ≤ 25 MB) |
+| Clear story camera media | `minitest --json --app ID user-story update <id> --clear-camera-media` (back to default feed) |
 | List flow types     | `minitest --json flow-types list` (built-ins + your tenant's custom types)                |
 | Create custom flow type | `minitest --json flow-types create --name "Subscription" [--usage-prompt "..."] [--icon tag] [--color gray]` |
 | Rename custom flow type | `minitest --json flow-types update "Subscription" --name "Billing"`                  |
