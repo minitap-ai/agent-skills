@@ -337,6 +337,37 @@ minitest --app <app_id> user-story update <story_id> --depends-on ""
 > one parent. The two flags are mutually exclusive on the same invocation —
 > `--remove-dependency` is ignored when `--depends-on` is also provided.
 
+#### Device count
+
+A story's **device count** is how many virtual devices a single run provisions.
+By default it is **auto**: one device per bound persona (minimum 1). Set an
+explicit override with `--device-count` on `user-story create` / `update`. The
+value is capped server-side at `min(3, tenant device quota)`.
+
+```bash
+# Create a story that always runs on 2 devices
+minitest --app <app_id> user-story create \
+  --name "Two-player match" --type other --device-count 2 \
+  --criteria "Both players see the shared game state"
+
+# Override an existing story to 3 devices
+minitest --app <app_id> user-story update <story_id> --device-count 3
+
+# Reset back to auto (one device per bound persona)
+minitest --app <app_id> user-story update <story_id> --device-count auto
+```
+
+Use more than one device only for flows that genuinely need concurrent devices:
+
+- **Real-time cross-account flows** — two accounts interacting live (chat,
+  multiplayer, sharing, calls) where one device acts and the other must observe.
+- **Session-conflict same-account tests** — the same account signed in on two
+  devices at once to exercise session invalidation, presence, or sync conflicts.
+
+Single-user journeys (login, checkout, navigation) should stay on auto. `list`
+and `get` show the effective device count when it is greater than 1; omitting
+`--device-count` on create leaves the story on auto.
+
 ### 3. Reading flow types and app knowledge
 
 When generating user stories programmatically (e.g. from an exploration
@@ -533,6 +564,7 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | Update user story   | `minitest --app ID user-story update <id> --add-criteria "..."`                   |
 | Set story dependencies | `minitest --app ID user-story update <id> --depends-on <parent_id> [--depends-on <parent_id2>]` |
 | Remove a dependency | `minitest --app ID user-story update <id> --remove-dependency <parent_id>`        |
+| Set story device count | `minitest --app ID user-story update <id> --device-count 2` (or `auto` to reset) |
 | List flow types     | `minitest flow-types list`                                                        |
 | Read app knowledge  | `minitest app-knowledge get --app ID`                                             |
 | Update app knowledge| `minitest app-knowledge update --app ID --content-file ./knowledge.md`            |
