@@ -55,6 +55,38 @@ Conventions the playbook relies on:
 
 The sections below document each command the playbook refers to.
 
+### Suite-generation hardening rules
+
+When you generate a suite from a codebase (cloud onboarding or manual), the
+suite is hardened automatically afterwards: it runs invisibly and self-heals
+before the customer sees it. That healing relies on the suite obeying these
+rules, so encode them as you generate — do not defer them.
+
+- **Self-contained scenarios (isolation-first).** Every story must be runnable
+  on its own: it sets up the state it needs from a clean start. Reach for
+  `--depends-on` **only** when a precondition genuinely cannot be recreated
+  inside the story (e.g. a costly one-time setup another story already
+  performs), and only for ordering/precondition reuse — never to carry state a
+  story could establish itself. A shallow, mostly-independent graph is the
+  goal: it lets the healer reconcile one story without invalidating everything
+  downstream.
+- **Credentials unknown → generate the story anyway.** If a journey needs an
+  account state you cannot provision (real bank login, a specific backend
+  state, a third-party credential), still create the story with the right
+  persona and criteria. Do **not** silently skip it. The hardening run will
+  escalate the missing piece as a customer-facing question — that ask-the-
+  customer loop is intended. Skipping the story hides the gap instead.
+- **One behavior per criterion, objectively checkable.** Each acceptance
+  criterion asserts a single observable outcome the agent can verify on screen.
+  Split compound checks. Vague criteria ("the app works") cannot be healed or
+  trusted.
+- **Validate every flow type.** Run `minitest flow-types list` and use only
+  those `--type` values; invalid types exit non-zero.
+- **Edit the graph only through minitest-cli.** Create and wire stories with
+  `user-story create/update`, `--depends-on`, and `user-story-binding` — the
+  same command surface the healing agent uses, so generation and healing stay
+  symmetric.
+
 ## Maintaining existing tests (`minitest maintenance`)
 
 Use `minitest maintenance` when the app UI/code changed and the customer wants
@@ -251,10 +283,11 @@ minitest --app <app_id> user-story create \
 > these involve real transactions and are not yet supported. Skip them during
 > codebase analysis and inform the user.
 
-**Test account requirement:** Before creating user stories that require login
-or account-specific state, ensure the user provides test credentials via the
-Minitest web app's test configuration. User stories should only cover journeys
-the test account can actually perform.
+**Test account requirement:** Prefer email-OTP personas (below) so most login
+and account-state journeys need no real credentials. When a journey genuinely
+requires a credential or backend state you cannot provision, still create the
+story with the right persona and criteria — the hardening run escalates the
+missing piece as a customer-facing question. Do not silently skip such stories.
 
 ### Test Profiles
 
