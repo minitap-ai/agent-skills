@@ -6,6 +6,17 @@ Skills follow the [Agent Skills](https://agentskills.io/) format.
 
 ## Available Skills
 
+### minitest-capabilities
+
+Understand Minitest's testing capabilities and model high-quality scenarios,
+personas, dependencies, device usage, and app knowledge.
+
+Use when:
+- Designing or reviewing a Minitest scenario suite
+- Deciding whether Mini can execute or observe a test
+- Creating personas or scenario dependencies
+- Choosing scenario granularity or device count
+
 ### minitest-cli
 
 Manage Minitest testing flows, upload native builds, and execute mobile/web test runs via the `minitest` CLI.

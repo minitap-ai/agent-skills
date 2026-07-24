@@ -1,0 +1,27 @@
+{
+  "name": "minitest-capabilities",
+  "version": "1.0.0",
+  "description": "Canonical Minitest product capabilities and scenario-authoring rules for apps, personas, dependencies, devices, and app knowledge.",
+  "author": "Minitap",
+  "license": "MIT",
+  "keywords": [
+    "testing",
+    "mobile",
+    "web",
+    "minitest",
+    "minitap",
+    "scenarios",
+    "personas",
+    "capabilities"
+  ],
+  "triggers": [
+    "minitest capabilities",
+    "create minitest scenarios",
+    "review minitest scenarios",
+    "minitest personas",
+    "minitest dependencies",
+    "minitest device count",
+    "minitest app knowledge",
+    "what can mini test"
+  ]
+}
