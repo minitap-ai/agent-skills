@@ -517,7 +517,8 @@ minitest --app <app_id> run list "User Login" --all
 **Run statuses:** `pending` → `running` → `completed` | `failed` | `cancelled`
 
 A completed run includes per-target results: pass/fail for each acceptance
-criterion, fail reasons, and recording URLs.
+criterion, fail reasons, recording URLs, and stable `resultId`, `criterionId`,
+and `criterionVersionId` identifiers for each criterion result.
 
 ### 7. Work with batches
 
@@ -552,6 +553,14 @@ By default only failing criteria are listed per story, evidence is omitted, and
 passing criteria appear only in the counters. `--verbose` includes evidence and
 passing criteria. Skipped stories carry `skipReason` and targets carry
 `skippedByCascade`, so a dependency-skipped story is not a failure.
+
+Submit feedback on a criterion result by its `resultId`. This is used for
+judgments such as marking an observed failure as expected behavior rather than
+an app defect:
+
+```bash
+minitest --app <app_id> --json run feedback <result_id> "Not a bug: expected behavior for this account"
+```
 
 ## CI / Automation Pattern
 
@@ -628,6 +637,7 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | List batches        | `minitest --app ID batch list`                                                    |
 | Get batch + runs    | `minitest --app ID batch get <batch_id>`                                          |
 | Batch verdicts (one call) | `minitest --app ID --json run verdicts <batch_id> [--platform P] [--only-failed] [--verbose]` |
+| Submit result feedback | `minitest --app ID --json run feedback <result_id> "text"`                         |
 | Cancel batch        | `minitest --app ID batch cancel <batch_id>`                                       |
 | Auth                | `minitest auth login`                                                             |
 | Mint API key        | `minitest auth api-key mint --tenant <id> --name <label>` (OAuth only)            |
