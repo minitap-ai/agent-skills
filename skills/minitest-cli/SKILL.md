@@ -513,6 +513,27 @@ minitest --app <app_id> batch cancel <batch_id>         # cancels all pending/ru
 
 **Batch statuses:** `pending` | `awaiting_build` | `running` | `completed` | `failed` | `cancelled`
 
+### 8. Read a whole batch's verdicts in one call
+
+`run verdicts` projects a batch into a compact, product-level pass/fail
+structure across all three grains — per-platform target roll-up, story ×
+platform outcome (with `skipReason`, `buildId`, `recordingPath`,
+`sessionPaths`), and per-criterion results (`status`, `criticality`,
+`failReason`, `resultSummary`, `confidence`). Use it instead of calling
+`batch get` + `run status` per story.
+
+```bash
+minitest --app <app_id> --json run verdicts <batch_id>
+minitest --app <app_id> --json run verdicts <batch_id> --platform ios   # one platform (ios/android/web)
+minitest --app <app_id> --json run verdicts <batch_id> --only-failed    # drop fully-passing stories
+minitest --app <app_id> --json run verdicts <batch_id> --verbose        # include evidence + passing criteria
+```
+
+By default only failing criteria are listed per story (passing criteria show
+up in the counters); --verbose adds each criterion’s evidence and the
+passing criteria too. Skipped stories carry skipReason and targets carry
+skippedByCascade, so a dependency-skipped story is not a failure.
+
 ## CI / Automation Pattern
 
 ```bash
@@ -584,6 +605,7 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | List runs for story | `minitest --app ID run list "Story Name"`                                         |
 | List batches        | `minitest --app ID batch list`                                                    |
 | Get batch + runs    | `minitest --app ID batch get <batch_id>`                                          |
+| Batch verdicts (one call) | `minitest --app ID --json run verdicts <batch_id> [--platform P] [--only-failed] [--verbose]` |
 | Cancel batch        | `minitest --app ID batch cancel <batch_id>`                                       |
 | Auth                | `minitest auth login`                                                             |
 | Mint API key        | `minitest auth api-key mint --tenant <id> --name <label>` (OAuth only)            |
