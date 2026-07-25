@@ -146,10 +146,11 @@ Treat `MINITEST_API_KEY` as a credential. Never commit it; rotate on suspected l
 
 ## Global Flags
 
-| Flag         | Effect                                                                      |
-| ------------ | --------------------------------------------------------------------------- |
+| Flag / environment | Effect                                                                |
+| ------------------ | --------------------------------------------------------------------- |
 | `--json`     | camelCase JSON to stdout, diagnostics to stderr — ideal for piping          |
 | `--app <id>` | Target app (overrides `MINITEST_APP_ID`). Must appear before the subcommand |
+| `MINITEST_CHANNEL` | Overrides the `X-Minitest-Channel` header value (default `cli`) for provenance tagging of automated editors |
 
 ## Exit Codes
 
@@ -188,6 +189,20 @@ minitest --app <app_id> apps dependencies
 
 The output is a `flowchart TD` with each node labelled `"Story Name\n(type)"`
 and directed edges showing dependency relationships (parent → child).
+
+Before changing dependencies, agents must simulate the delta through the CLI
+instead of computing graph effects themselves:
+
+```bash
+minitest --app ID --json apps dependencies <app_id> --simulate \
+  --add <story_id>:<depends_on_id> \
+  --remove <story_id>:<depends_on_id>
+```
+
+Simulation is read-only and returns `valid`, `cycle` (including the cycle path
+when invalid), `addedEdges`, `removedEdges`, `affectedStories`, `runOrder`
+(parallel waves), and the resulting edges. An edge `A:B` means “A depends on
+B”, so B runs first. `--add` and `--remove` require `--simulate`.
 
 #### Creating apps
 
@@ -305,14 +320,21 @@ minitest --app <app_id> user-story get <user_story_id>
 minitest --app <app_id> user-story update <user_story_id> --name "New Name"
 minitest --app <app_id> user-story update <user_story_id> --add-criteria "New check"
 minitest --app <app_id> user-story update <user_story_id> \
+  --set-criterion <criterion-id-or-index>="New text"
+minitest --app <app_id> user-story update <user_story_id> \
+  --revert-criterion <criterion-id-or-index>=<version_id>
+minitest --app <app_id> user-story update <user_story_id> \
   --criteria "First check" --criteria "Second check"   # full replace
 minitest --app <app_id> user-story delete <user_story_id> --force
 ```
 
-> **Acceptance criteria are versioned.** `--criteria` fully replaces the set:
-> unchanged content preserves identity (stable `criterionId`), modified content
-> creates a new version on the same criterion, and removed items are
-> soft-deleted. `--add-criteria` only appends.
+> **Acceptance criteria are versioned.** For rewording, always prefer repeatable
+> `--set-criterion <criterion-id-or-index>="new text"`: it changes one criterion
+> while preserving its identity and version history.
+> `--revert-criterion <criterion-id-or-index>=<version_id>` restores that version's exact text and
+> records the change as a revert. Both flags conflict with `--criteria` and
+> `--add-criteria`. `--criteria` fully replaces the set and severs history for
+> reworded criteria; `--add-criteria` only appends.
 
 #### Story dependencies
 
@@ -514,7 +536,7 @@ minitest --app <app_id> batch cancel <batch_id>         # cancels all pending/ru
 
 **Batch statuses:** `pending` | `awaiting_build` | `running` | `completed` | `failed` | `cancelled`
 
-### 8. Read a whole batch's verdicts in one call
+### 8. Read a whole batch’s verdicts in one call
 
 `run verdicts` projects a batch into a compact, product-level pass/fail
 structure across all three grains — per-platform target roll-up, story ×
@@ -524,16 +546,13 @@ platform outcome (with `skipReason`, `buildId`, `recordingPath`,
 `batch get` + `run status` per story.
 
 ```bash
-minitest --app <app_id> --json run verdicts <batch_id>
-minitest --app <app_id> --json run verdicts <batch_id> --platform ios   # one platform (ios/android/web)
-minitest --app <app_id> --json run verdicts <batch_id> --only-failed    # drop fully-passing stories
-minitest --app <app_id> --json run verdicts <batch_id> --verbose        # include evidence + passing criteria
+minitest --app <app_id> --json run verdicts <batch_id> [--platform ios|android|web] [--only-failed] [--verbose]
 ```
 
-By default only failing criteria are listed per story (passing criteria show
-up in the counters); --verbose adds each criterion’s evidence and the
-passing criteria too. Skipped stories carry skipReason and targets carry
-skippedByCascade, so a dependency-skipped story is not a failure.
+By default only failing criteria are listed per story, evidence is omitted, and
+passing criteria appear only in the counters. `--verbose` includes evidence and
+passing criteria. Skipped stories carry `skipReason` and targets carry
+`skippedByCascade`, so a dependency-skipped story is not a failure.
 
 Submit feedback on a criterion result by its `resultId`. This is used for
 judgments such as marking an observed failure as expected behavior rather than
@@ -586,12 +605,15 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | Apply maintenance edits | `minitest maintenance apply` or `minitest maintenance apply --review`          |
 | List apps           | `minitest apps list`                                                              |
 | App dependency graph| `minitest apps dependencies <app_id>` (Mermaid flowchart to stdout)               |
+| Simulate dependency change | `minitest --app ID --json apps dependencies <id> --simulate --add <story>:<parent>` |
 | Create native app   | `minitest apps create --name "My App" --platform ios --platform android [--tenant ID] [--description ...] [--slug ...] [--icon ./icon.png]` |
 | Create web app      | `minitest apps create --name "My Web App" --platform web --web-url https://example.com [--tenant ID]` |
 | Create user story   | `minitest --app ID user-story create --name "..." --type login --criteria "..."` |
 | Create user story with profile | `minitest --app ID user-story create --name "..." --type login --profile <profile_id> --criteria "..."` |
 | List user stories   | `minitest --app ID user-story list`                                               |
 | Update user story   | `minitest --app ID user-story update <id> --add-criteria "..."`                   |
+| Reword one criterion (keep history) | `minitest --app ID user-story update <id> --set-criterion <crit_id>="text"` |
+| Revert criterion to a version | `minitest --app ID user-story update <id> --revert-criterion <crit_id>=<version_id>` |
 | Set story dependencies | `minitest --app ID user-story update <id> --depends-on <parent_id> [--depends-on <parent_id2>]` |
 | Remove a dependency | `minitest --app ID user-story update <id> --remove-dependency <parent_id>`        |
 | Set story device count | `minitest --app ID user-story update <id> --device-count 2` (or `auto` to reset) |
