@@ -1,3 +1,4 @@
+<!-- skill-references-hash: 8ac58b47edef11caff4af07a61d725c0256e2c4bc56a56ffffd3350d3d9c35e1 -->
 ---
 name: minitest-cli
 description: >
