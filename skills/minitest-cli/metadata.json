@@ -1,6 +1,6 @@
 {
   "name": "minitest-cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Use the minitest CLI to manage testing flows, upload native builds, execute mobile and web app test runs, and analyse results via the command line.",
   "author": "Minitap",
   "license": "MIT",

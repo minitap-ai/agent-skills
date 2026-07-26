@@ -56,6 +56,29 @@ Conventions the playbook relies on:
 
 The sections below document each command the playbook refers to.
 
+## Designing a full test suite
+
+When the user wants to design a **complete** test suite from an app codebase —
+not just add a story or two — follow the disciplined multi-wave workflow in
+[`reference/test-suite-design.md`](reference/test-suite-design.md). It takes an
+app repository to a reviewed suite through ordered waves of read-only codebase
+analysis: recon, surface mapping, gating/persona discovery, state modelling,
+suite design, and adversarial verification.
+
+Two companion references support that workflow:
+
+- [`reference/suite-schemas.md`](reference/suite-schemas.md) — the local
+  `suite.yaml` schema and the step-writing rules the workflow's artifacts follow.
+- [`reference/minitest-target.md`](reference/minitest-target.md) — the executor
+  envelope: what the Minitest tester agent (Mini) can and cannot run or observe,
+  so you never design a scenario it can't execute.
+
+The workflow ends by **applying the suite through the ordinary `minitest` CLI
+commands already documented in this SKILL.md** — `test-profile create`,
+`user-story create` (with `--criteria`, `--profile`, `--depends-on`),
+`app-knowledge update`, and so on. There is no special apply command: the
+reviewed suite is replayed as regular CLI calls in dependency order.
+
 ## Maintaining existing tests (`minitest maintenance`)
 
 Use `minitest maintenance` when the app UI/code changed and the customer wants

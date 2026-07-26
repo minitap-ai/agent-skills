@@ -34,3 +34,18 @@ This skill teaches AI agents how to use the `minitest` command-line tool. Where 
 ```
 npx skills add minitap-ai/agent-skills --skill minitest-cli
 ```
+
+## Maintenance — two writers
+
+This skill has two distinct writers; keep them separate:
+
+- **Hand-maintained:** `SKILL.md`, `README.md`, and `metadata.json`. Edit these
+  by hand.
+- **Machine-generated:** everything under `reference/`. Those files are rendered
+  by the testing-service CI (each begins with
+  `<!-- rendered by Minitap — do not edit -->`) and must not be
+  hand-edited — changes belong in testing-service and are re-rendered from there.
+  The `<!-- skill-references-hash: … -->` line near the top of `SKILL.md` is
+  likewise machine-managed: CI rewrites it whenever the reference files change so
+  that `minitest upgrade` (which hashes `SKILL.md` only) detects the update. Do
+  not hand-edit that line.
