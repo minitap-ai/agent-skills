@@ -414,23 +414,75 @@ Single-user journeys (login, checkout, navigation) should stay on auto. `list`
 and `get` show the effective device count when it is greater than 1; omitting
 `--device-count` on create leaves the story on auto.
 
-### 3. Reading flow types and app knowledge
+### 3. Reading and managing flow types, and app knowledge
 
 When generating user stories programmatically (e.g. from an exploration
 subagent), validate every `--type` value against the live list of flow types
 before calling `user-story create` — invalid values exit non-zero.
 
 ```bash
-# List valid flow (user-story) type values, one per line
+# List every flow (user-story) type value, one name per line
 minitest flow-types list
 
-# Same data as a JSON array, easy to pipe into jq
+# Same list as JSON objects, with each custom type's id and presentation fields
 minitest --json flow-types list
+# [{"name": "login",    "custom": false, "id": null,    "icon": null,          …},
+#  {"name": "Billing",  "custom": true,  "id": "3fa85…", "icon": "credit-card", …}]
+
+# Just the names, for a membership check
+minitest --json flow-types list | jq -r '.[].name'
 ```
 
-`flow-types list` wraps `GET /api/v1/user-story-types` on testing-service.
-There is no public write endpoint at the time of writing — adding new types
-requires a backend change.
+The list is the built-in types plus your tenant's custom ones. Flow types are
+**tenant-scoped**, so `flow-types` commands need no `--app` — pass one only if
+your account spans several tenants, to say which one to act on.
+
+When no built-in type fits a journey, create your own instead of forcing it into
+`other`:
+
+```bash
+minitest flow-types create --name "Subscription" \
+  --usage-prompt "Paid plans are sandboxed: use card 4242 4242 4242 4242."
+
+# Optional presentation flags, defaults are tag/gray
+minitest flow-types create --name "Subscription" --icon credit-card --color green
+```
+
+`--usage-prompt` is extra context handed to the testing agent whenever it runs a
+story of that type — use it for domain rules that apply to the whole family of
+flows. Creating a name that already exists (or that collides with a built-in)
+fails with the server's conflict message.
+
+Rename or restyle an existing custom type with `update`, addressing it by name
+or by id. The type keeps its identity, so stories already on it stay on it:
+
+```bash
+minitest flow-types update "Subscription" --name "Billing"
+minitest flow-types update "Billing" --usage-prompt "Card 4242… declines above 500."
+```
+
+`delete` removes a custom type and **resets every user story on it to `other`**,
+so it refuses to run without `--yes`:
+
+```bash
+minitest flow-types delete "Billing" --yes
+```
+
+Pass the type name to any user-story command; the CLI resolves it for you
+(matching is case-insensitive):
+
+```bash
+minitest --app <app_id> user-story create --name "Upgrade to Pro" --type "Billing" \
+  --criteria "The plan badge reads Pro after checkout"
+
+minitest --app <app_id> user-story list --type "Billing"
+```
+
+`flow-types list` wraps `GET /api/v1/user-story-types` (built-ins) plus
+`GET /api/v1/apps/<app_id>/custom-user-story-types`; `create`, `update` and
+`delete` wrap `POST` / `PATCH` / `DELETE` on the latter. The app in that path is
+only addressing: the CLI picks one of your apps automatically when you do not
+pass `--app`.
 
 For app-level prompt context (the markdown blob that conditions the AI agent
 during runs), use `app-knowledge`:
@@ -641,7 +693,10 @@ minitest --json batch list | jq '.items[] | {id, status, storyRuns: (.storyRuns 
 | Set story dependencies | `minitest --app ID user-story update <id> --depends-on <parent_id> [--depends-on <parent_id2>]` |
 | Remove a dependency | `minitest --app ID user-story update <id> --remove-dependency <parent_id>`        |
 | Set story device count | `minitest --app ID user-story update <id> --device-count 2` (or `auto` to reset) |
-| List flow types     | `minitest flow-types list`                                                        |
+| List flow types     | `minitest flow-types list` (built-ins + your tenant's custom types)                |
+| Create custom flow type | `minitest flow-types create --name "Subscription" [--usage-prompt "..."] [--icon tag] [--color gray]` |
+| Rename custom flow type | `minitest flow-types update "Subscription" --name "Billing"`                  |
+| Delete custom flow type | `minitest flow-types delete "Billing" --yes` (its stories fall back to `other`) |
 | Read app knowledge  | `minitest app-knowledge get --app ID`                                             |
 | Update app knowledge| `minitest app-knowledge update --app ID --content-file ./knowledge.md`            |
 | List env vars       | `minitest --app ID env list` (values masked; `--show` reveals)                    |
