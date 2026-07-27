@@ -416,6 +416,11 @@ and `get` show the effective device count when it is greater than 1; omitting
 
 ### 3. Reading and managing flow types, and app knowledge
 
+> Needs **minitest-cli ≥ 0.22.0**. On an older CLI the `create` / `update` /
+> `delete` subcommands below do not exist, and `--json flow-types list` still
+> returns a flat array of names. Check with `minitest --version` and run
+> `minitest upgrade` before assuming a command is broken.
+
 When generating user stories programmatically (e.g. from an exploration
 subagent), validate every `--type` value against the live list of flow types
 before calling `user-story create` — invalid values exit non-zero.
