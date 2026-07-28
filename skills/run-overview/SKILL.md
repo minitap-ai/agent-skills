@@ -12,6 +12,7 @@ description: >-
 
 You are triaging a finished run (the product UI calls a batch a "run"). Read
 product-level verdicts, identify the mechanism behind each actionable issue,
+aggregate occurrences of the same semantic issue across iOS, Android, and web,
 and emit a v2 issue board. The product persists board state for the session and
 keys it by `issueKey`; never track pending, handled, or dismissed state yourself.
 
@@ -57,9 +58,10 @@ Do not use confidence, likelihood thresholds, severity, or infrastructure as a
 proxy for classification. Write a short noun-phrase `title` and a one-sentence
 `reason` that states the causal mechanism and observed consequence.
 
-Preserve the verdict's effective `criticality` as exactly `critical` or
-`warning`; never infer or downgrade it. Criticality controls presentation order,
-not bucket classification.
+Preserve effective `criticality` as exactly `critical` or `warning`; never infer
+or downgrade it. When grouped occurrences differ, the issue is `critical` if any
+occurrence is critical; otherwise it is `warning`. Criticality controls
+presentation order, not bucket classification.
 
 Every `flaky_ac` and `product_limitation` issue gets exactly one narrowest viable
 proposal. Choose among:
@@ -120,16 +122,21 @@ reply; never mention the file):
     "issues": [
       {
         "issueKey": "<stable key per the rules below>",
-        "appFailureId": "<stable app failure id, when present>",
         "bucket": "customer_action|flaky_ac|product_limitation",
         "batchId": "<batch uuid>",
         "userStoryId": "<user story uuid>",
         "storyName": "<exact user story name>",
-        "resultId": "<criterion result uuid>",
         "criterionId": "<criterion uuid>",
-        "criterionVersionId": "<current criterion version uuid>",
         "criterion": "<exact current criterion text>",
-        "platform": "ios|android|web",
+        "occurrences": [
+          {
+            "platform": "ios|android|web",
+            "resultId": "<criterion result uuid, when present>",
+            "appFailureId": "<app failure uuid, when present>",
+            "storyRunId": "<story run uuid, when present>",
+            "criterionVersionId": "<current criterion version uuid, when present>"
+          }
+        ],
         "criticality": "critical|warning",
         "title": "<short issue title>",
         "reason": "<one-sentence causal explanation>",
@@ -145,22 +152,42 @@ reply; never mention the file):
 }
 ```
 
-Copy `batchId`, `userStoryId`, `storyName`, `resultId`, `criterionId`, the current
-`criterionVersionId`, `criterion`, and `platform` verbatim from the verdicts.
-Copy the effective `criticality` verbatim as `critical` or `warning`. These
-fields are immutable issue context. Include `appFailureId` when the verdict
-supplies it; otherwise omit that field.
+Aggregate all verdict evidence before emitting any issue. Identity is semantic,
+never based on text similarity:
 
-Set `issueKey` to `appFailureId` when available. Otherwise, for a
-`product_limitation` whose proposal is `archive_scenario`, set it to
-`<userStoryId>:product_limitation` so multiple criteria do not duplicate the
-same scenario remedy. For every other issue, set it to
-`<criterionId>:<platform>:<bucket>`. Never derive it from mutable prose,
-`resultId`, or `batchId`. Emit one entry per unique issue key. Re-enumerating a
-run is an upsert into the session board and must not reset existing issue state.
+- A criterion-backed issue is identified by `criterionId` + `bucket`; set
+  `issueKey` to `<criterionId>:<bucket>`.
+- A scenario-level `product_limitation` is identified by `userStoryId` +
+  `bucket`; set `issueKey` to `<userStoryId>:<bucket>`. Use this identity when
+  the limitation applies to the scenario as a whole, including an
+  `archive_scenario` remedy, so multiple criteria do not duplicate it.
 
-For `customer_action`, omit `proposal`. For the other buckets, use exactly one
-of these proposal shapes:
+Never include `platform`, `appFailureId`, `resultId`, or `batchId` in an
+`issueKey`, and never derive identity from mutable `title`, `reason`, criterion
+text, or other prose. Emit exactly one issue per identity and never emit
+duplicate issues for the same identity.
+
+Copy shared `batchId`, `userStoryId`, and `storyName` verbatim from the verdicts.
+For a criterion-backed issue, also copy one shared `criterionId` and `criterion`
+verbatim. A scenario-level issue omits criterion-specific issue fields unless
+they are genuinely shared by every occurrence. Keep one shared `title`,
+`reason`, and `criticality` per grouped issue. Set it to `critical` if any
+occurrence is critical; otherwise set it to `warning`.
+
+Put each underlying verdict occurrence in `occurrences`. Copy its `platform`
+verbatim and include its `resultId`, `appFailureId`, `storyRunId`, and
+`criterionVersionId` when supplied; omit only the unavailable fields. Every
+occurrence must include at least one of `appFailureId` or `resultId` so Conductor
+can resolve a Testing Service target; both may be present, but never emit an
+occurrence with neither. Do not keep scalar `platform`, `resultId`,
+`appFailureId`, `storyRunId`, or `criterionVersionId` fields on the issue. Do not
+emit infrastructure or confidence fields anywhere in the payload.
+Re-enumerating a run is an upsert into the session board and must not reset
+existing issue state.
+
+For `customer_action`, omit `proposal`. For the other buckets, attach exactly
+one proposal to the grouped issue, regardless of its number of occurrences, and
+use exactly one of these proposal shapes:
 
 ```json
 {"type":"edit_criterion","before":"<exact current text>","after":"<replacement text>","reason":"<mechanism-based reason>"}
@@ -177,7 +204,11 @@ of these proposal shapes:
 For `edit_criterion`, `before` must match the current version exactly and `after`
 must be paste-ready. For `remove_criteria`, include every criterion id to remove
 with its current expected version and `content` copied exactly from the current
-criterion. Do not add proposal kinds or fields outside these contracts.
+criterion. Before proposing `edit_criterion` or `remove_criteria` for a
+criterion-backed grouped issue, verify that all occurrences carry the same
+current `criterionVersionId`. If versions disagree, re-read current state instead
+of emitting an actionable grouped issue; emit it only after resolving one shared
+current version. Do not add proposal kinds or fields outside these contracts.
 
 Keep `summary` to one sentence about the board as a whole. In prose, provide at
 most one short framing sentence; the UI renders the issue rows and remedies, so
@@ -186,7 +217,10 @@ never restate rows or offer suggested actions that duplicate the board.
 ## 4. Fix kit (explicit follow-up only)
 
 Build a fix kit only after the user explicitly selects a `customer_action` issue
-and asks for help fixing it. Never emit a fix kit during board enumeration.
+and asks for help fixing it. A fix kit targets one occurrence of that grouped
+issue; use the occurrence the user selected, or the clearest occurrence while
+preferring a critical one if no platform was specified. Never emit a fix kit
+during board enumeration.
 
 Re-read the evidence with:
 
