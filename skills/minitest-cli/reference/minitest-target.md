@@ -20,6 +20,11 @@ unprocessable, not because the app is broken.
 - Gestures: tap (by label, coordinates, or percent), long-press, swipe, drag
   (including pick-up drag with hold-before-move), pinch/zoom (scale or explicit
   two-finger points).
+- Curved gestures (**Android, iOS and web**): trace an arbitrary path in a single
+  press-move-release — circles, arcs, loops, figure-eights, freeform curves.
+  Rotary dials, volume/brightness knobs, circular unlocks, pattern locks,
+  signature pads and arc sliders are all testable. On mobile, paths can be
+  anchored to an element's on-screen bounds, so they work on any screen size.
 - Text: type into the focused field or a targeted element, erase, press enter,
   navigate back/home (Android).
 - Observation: screenshots (standard and high-res), compact or full UI hierarchy,
@@ -33,11 +38,24 @@ unprocessable, not because the app is broken.
   scanning a QR code, presenting a document) ARE testable in the web lane.
 - Files: push a file to the device (for upload/attachment flows, seeded via
   story-bound test files).
-- Connectivity (**Android only**): toggle wifi on/off and read connectivity state.
-  iOS and web runs cannot change connectivity.
+- Connectivity: toggle wifi on/off, switch airplane mode on/off, and read
+  connectivity state (**Android**); take the page offline and back online
+  (**web**). iOS runs cannot change connectivity.
+- Screen orientation (**Android and iOS**): rotate the device to landscape or
+  portrait to verify responsive layouts. Web runs keep the viewport they started
+  with — the stealth browser pins its window to the fingerprint it was launched
+  with, so pick the right viewport preset up front.
+- Device state: grant or revoke permissions without going through the system
+  prompt and switch between light and dark appearance (**Android, iOS and web**);
+  on iOS, also freeze the status bar to a fixed time/battery for stable
+  screenshots.
+- Push notifications (**iOS**): deliver an arbitrary notification payload to the
+  app under test, so notification-driven flows do not depend on a real backend
+  push. On Android, notifications must arrive organically.
 - Geolocation (**Android and iOS** cloud devices): mock the GPS position to any
   coordinates, simulate movement along a route at a given speed, and restore the
-  real location. Web runs have no device location. Caveat: apps that rely on
+  real location. Web runs have no device location — the stealth browser blocks
+  the geolocation override. Caveat: apps that rely on
   Play Services `GeofencingClient` transition callbacks may not react on Android
   (Limrun runs microG, not real GMS) — apps reading location directly work fine.
 - Identity & email: read any `<prefix>@qa.minitap.ai` inbox at runtime (OTP codes,
@@ -65,14 +83,16 @@ unprocessable, not because the app is broken.
   back/home, NFC, or Bluetooth pairing.
 - Camera input on **mobile** runs (no real-world scene capture there). The web
   lane does NOT have this limit — see the simulated web camera above.
-- Toggling connectivity on iOS or web, or using airplane mode anywhere (wifi
-  toggle only, Android only).
+- Toggling connectivity or airplane mode on iOS; rotating a web viewport or
+  mocking a location on web (the stealth browser pins both).
 - Pairing or interacting with a smartwatch, wearable, or other external hardware
   (a second phone or tablet IS supported — see multi-device above).
 - Real payment card entry or purchases with real money (sandbox/test payment
   flows only, when the app provides them).
-- Precise timing guarantees (e.g. "responds within 200ms") — Mini can observe
-  order and outcomes, not millisecond latency.
+- Precise timing or gesture-velocity guarantees (e.g. "responds within 200ms",
+  "flick fast enough to fling the list to the end") — Mini can observe order and
+  outcomes, not millisecond latency, and gesture pacing is only approximate
+  (noticeably slower than requested on Android).
 
 
 ## Device count
@@ -88,8 +108,9 @@ Multi-device is the deliberate exception, not a default to reach for. For an ord
 
 **Cover offline and connectivity scenarios when the app warrants it.** If the app shows offline support, cached content, or sync mechanisms, create dedicated stories to test those flows. Example criterion: "Disable wifi, confirm the app shows cached content, then re-enable and verify data syncs."
 
-- Use the wording **"Offline (wifi off)"** — the tester toggles wifi, never "airplane mode".
-- Connectivity control is **Android-only**; iOS and web runs skip network-toggle criteria.
+- On Android, use the wording **"Offline (wifi off)"** — the tester toggles wifi, never "airplane mode".
+- On web, the tester takes the page offline and back online, so word it as **"Offline"** rather than "wifi off".
+- **iOS** runs cannot change connectivity — skip network-toggle criteria there.
 
 
 ## Story types
