@@ -70,7 +70,9 @@ proposal. Choose among:
 - `remove_criteria` when the listed criteria should go but the scenario remains
   useful.
 - `archive_scenario` when the scenario's core journey cannot produce a reliable
-  result.
+  result. This is a scenario-level remedy, so it belongs only to a
+  `product_limitation` issue keyed by `userStoryId`; a `flaky_ac` issue is
+  criterion-scoped and takes `edit_criterion` or `remove_criteria`.
 
 In particular, do not list alternative remedies for a `product_limitation`.
 Choose one.
