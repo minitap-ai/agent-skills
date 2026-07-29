@@ -38,7 +38,12 @@ Minitest executor (Mini) can and cannot run. Read both now.
 
 ## Subagents
 
-Every wave except Wave 4 delegates read-only investigation to subagents. Use
+Every wave except Wave 4 delegates read-only investigation to subagents, and
+**each such wave MUST dispatch its own dedicated subagent(s) and write its own
+named artifact before the next wave begins.** Collapsing multiple waves into one
+broad "explore everything" subagent is a defect — each wave has its own scoped
+subagent(s), its own closed-ended questions, and its own artifact. **Do not
+proceed to Wave N+1 until Wave N's artifact exists.** Use
 whichever mechanism your host exposes, in this order of preference:
 
 - **opencode**: dispatch the `explore` subagent, all subagents of a wave in one
@@ -72,34 +77,51 @@ files. Set `WORK=<temp dir>` and `REPO=<app path>`.
 | `04-state-model.md` | Per-journey consumes/produces/destroys + auth trajectory | Wave 3 |
 | `suite.yaml` | The reviewed design, applied in Wave 6 | Wave 4, patched by Wave 5 |
 
-## Pre-wave — establish context (ask the user)
+## Pre-wave — establish context (ask the user FIRST)
 
-Before Wave 0, ask the user three things and record the answers:
+**This pre-wave is mandatory and gates Wave 0. Ask all three as THREE SEPARATE
+`question` calls — sources of truth first — and record every answer before you
+touch code.** Do not dispatch any subagent or begin Wave 0 until you have asked
+all three. The most common failure is diving straight into codebase analysis and
+either never asking for external sources of truth or asking late and bundled with
+the scope question — that is a defect, not a shortcut. Ask, then analyze.
 
-1. **Context.** What is this app, who uses it, and what matters most to test?
-   Anything a codebase read won't reveal (backend states you can provision, real
-   accounts you own, known-flaky areas).
-2. **Sources of truth.** Where should ground truth come from beyond the code — a
-   design doc, an analytics event catalog, an existing test plan, a product
-   spec? Point subagents at these as authoritative.
-3. **Scope.** Design for the **whole app**, or a **sub-part** (one tab, one
-   flow, one feature area)? Scope narrows every later wave — confirm the boundary
-   before spending analysis on surfaces the user doesn't care about.
+Ask the user three things as three distinct questions (external sources of truth
+first, never bundled) and record the answers:
+
+1. **Sources of truth (your literal FIRST `question`, before any code read or
+   subagent dispatch).** Where should ground truth come from beyond the code — a
+   product spec, a PRD, a design doc, an existing test plan, a store/website
+   link? These capture intent the code can't. Ask for them explicitly **before**
+   any codebase analysis and as their own `question` call — never merged with
+   context or scope; if the user has none, they say so and you proceed from the
+   code — but you must ask before you start. Point subagents at anything named as
+   authoritative.
+2. **Context (a separate `question`).** What is this app, who uses it, and what
+   matters most to test? Anything a codebase read won't reveal (backend states
+   you can provision, real accounts you own, known-flaky areas).
+3. **Scope (a separate `question`).** Design for the **whole app**, or a
+   **sub-part** (one tab, one flow, one feature area)? Scope narrows every later
+   wave — confirm the boundary before spending analysis on surfaces the user
+   doesn't care about.
 
 ## Wave 0 — Recon
 
-One subagent, breadth only. It locates *where things live*: framework, routing,
-auth implementation, feature-flag/remote-config surfaces, entitlement/role
-checks, i18n/strings, analytics events, build variants. It answers "where to
-dig", not "how it works". Merge into `00-recon.md`; every later dispatch embeds
-the relevant pointers.
+One dedicated recon subagent, breadth only. It locates *where things live*:
+framework, routing, auth implementation, feature-flag/remote-config surfaces,
+entitlement/role checks, i18n/strings, analytics events, build variants. It
+answers "where to dig", not "how it works". Merge into `00-recon.md`; every later
+dispatch embeds the relevant pointers. **Do not begin Wave 1 until `00-recon.md`
+exists** — Wave 0 is not folded into any other wave.
 
 ## Wave 1 — Surface mapping
 
-Shard the app by top-level navigation area (one subagent per tab / drawer section
-/ auth-gated zone, enumerated from the recon pointer map, bounded by the chosen
-scope). Each returns: screens, entry paths (tab, button, deep link, push,
-onboarding), and **candidate journeys** at UX level.
+Shard the app by top-level navigation area — **one subagent per tab / drawer
+section / auth-gated zone**, enumerated from the recon pointer map, bounded by the
+chosen scope, all dispatched in parallel. This is a sharded fan-out, never a
+single broad "map the whole app" dispatch. Each returns: screens, entry paths
+(tab, button, deep link, push, onboarding), and **candidate journeys** at UX
+level.
 
 Ground truth to prioritize over code structure: the wired route/navigation graph
 (excludes dead code), analytics events, onboarding/deep-link/push entry points,
@@ -107,10 +129,12 @@ i18n/strings, plus any sources of truth the user named.
 
 Merge into `01-app-map.md`, dedup journeys across shards. Keep the ~15–40
 journeys a real user plausibly performs; drop admin/debug surfaces unless asked.
+**Do not begin Wave 2 until `01-app-map.md` exists.**
 
 ## Wave 2 — Gating hunt (the trap wave)
 
-A dedicated wave — do **not** treat flags/tiers as incidental Wave 1 findings.
+A dedicated wave with its own dedicated subagent(s) — do **not** treat flags/tiers
+as incidental Wave 1 findings or fold this hunt into an earlier dispatch.
 Parallel subagents hunt what differentiates one account from another: feature
 flags (static, build variants, and **remote config** — whose runtime value is
 unknowable from code); entitlements/tiers (paywalls, plan checks, role guards,
@@ -119,7 +143,8 @@ state, empty-vs-populated data, A/B assignments).
 
 Merge into `02-capability-matrix.md`: each Wave 1 journey annotated
 `visible / hidden / paywalled / degraded / unknown(remote)` per account variant,
-with evidence. Then **you** derive `03-personas.yaml`, applying the account-gating
+with evidence. **Do not begin Wave 3 until `02-capability-matrix.md` exists.**
+Then **you** derive `03-personas.yaml`, applying the account-gating
 and persona doctrine below — the minimal basis set, never the cross-product.
 
 **What separates one account from another is the highest-value signal in the app — and the easiest to miss.** Two users on the same screen can see different things: a Pro badge, an extra tab, a paywall, a region-only feature, an experiment variant. Hunt these differentiators on purpose while you explore; don't treat them as incidental. Each one you find is a persona worth testing and a flow worth covering; each one you miss is a whole surface that never gets tested.
@@ -166,9 +191,11 @@ A **test profile** (persona) represents one specific user identity and state. St
 **Default profile rule:** set a default profile only when a single persona is clearly the one most newly created stories should start with (typically the main signed-in account). If multiple personas are equally primary, leave default unset.
 
 
-**Checkpoint (ask the user):** confirm the persona catalog and whether each
-account can actually be provisioned, before Wave 3. This is the one checkpoint
-worth a human answer.
+**Checkpoint — HARD STOP (a `question` the user must answer):** present the
+derived persona catalog and ask the user to confirm it and whether each account
+can actually be provisioned. Do **not** start Wave 3 until the user answers this
+`question`. This is the one checkpoint worth a human answer — never skip it or
+assume the answer.
 
 ## Wave 3 — State & auth-transition analysis
 
@@ -176,8 +203,10 @@ For each journey (batch ~5–8 per subagent), answer three questions: **Consumes
 (what must exist before — account-level or device-level?), **Produces/destroys**
 (what persists after — reversible in-app or not?), and **Auth trajectory** (does
 it sign out, switch, or create an account? default `output_account =
-input_account`). Merge into `04-state-model.md`. Dependencies and account wiring
-are now **derived facts**, not guesses.
+input_account`). This wave dispatches its own dedicated subagents (batched by
+journey); do not fold it into an earlier wave. Merge into `04-state-model.md`.
+**Do not begin Wave 4 until `04-state-model.md` exists.** Dependencies and account
+wiring are now **derived facts**, not guesses.
 
 ## Wave 4 — Suite design (you alone, zero delegation)
 
@@ -344,12 +373,14 @@ Design rules on top of that doctrine:
 
 ## Wave 5 — Adversarial verification
 
-Dispatch each scenario (batch a few per subagent) to a **fresh** subagent that
-has NOT seen your design rationale, asking only: *"Given the code, can persona P
-actually execute these steps and observe these criteria?"* It checks
-reachability for that tier/flag set, criteria observability, and gating
-mismatches. In parallel, run your own mechanical invariant pass over `suite.yaml`
-(full list in suite-schemas.md), then the suite self-check below.
+**This wave is mandatory — it is not optional and is never skipped.** Dispatch
+each scenario (batch a few per subagent) to a **fresh** subagent that has NOT seen
+your design rationale, asking only: *"Given the code, can persona P actually
+execute these steps and observe these criteria?"* It checks reachability for that
+tier/flag set, criteria observability, and gating mismatches. In parallel, run
+your own mechanical invariant pass over `suite.yaml` (full list in
+suite-schemas.md), then the suite self-check below. Skipping the fresh-subagent
+verification or the mechanical pass is a defect.
 
 **Before the suite is final, audit it as if someone else built it.** You wrote these stories knowing what you intended, which is exactly why you'll miss where they don't hold up. Take one cold pass over the finished set and fix what it surfaces — a few quiet corrections here save the user from a suite that looks complete but doesn't run.
 
@@ -393,8 +424,12 @@ unsure of a flag.
 4. **Verify the wiring.** `minitest apps dependencies` to review the graph; fix
    with `minitest user-story update` / `minitest user-story-binding set-profile`.
 
-**Checkpoint (ask the user):** present the persona table, the scenario table
+**Checkpoint — HARD STOP before any CLI creation (a `question` the user must
+answer):** present the full planned suite — the persona table, the scenario table
 (id, name, persona, input→output account, depends_on), the dependency DAG, and
-the coverage summary, and get approval **before** creating anything. After
-applying, offer to replay the suite: hand off to the web app's "Run tests" flow,
-or trigger a run through the CLI if the user wants one now.
+the coverage summary — and get **explicit user approval via a `question` call
+BEFORE creating anything** with the minitest CLI (no app-knowledge update, no
+test-profile, no user-story until the user approves). Do not run a single
+creating CLI command until the user has approved. After applying, offer to replay
+the suite: hand off to the web app's "Run tests" flow, or trigger a run through
+the CLI if the user wants one now.

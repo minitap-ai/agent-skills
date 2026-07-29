@@ -1,4 +1,3 @@
-<!-- skill-references-hash: 8ac58b47edef11caff4af07a61d725c0256e2c4bc56a56ffffd3350d3d9c35e1 -->
 ---
 name: minitest-cli
 description: >
@@ -9,6 +8,7 @@ description: >
   affects UI, navigation, or user journeys to check if existing tests need
   to be updated.
 ---
+<!-- skill-references-hash: 1a27c0695e42decfc910c6c8b87bd0ab37f42cb6fef0faf58db4558d43f2a741 -->
 
 # Minitest CLI
 
