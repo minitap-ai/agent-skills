@@ -72,34 +72,22 @@ value by design:
 
 ## Onboarding a new app (`minitest init`)
 
-If you are onboarding an app from scratch, run `minitest init` first. It prints
-an end-to-end onboarding playbook — the ordered steps to take this app from
-nothing to a wired test suite: authenticate, find/create the app, define personas
-(test profiles), map user journeys, and create scenarios with wired dependencies.
-The current playbook then hands off to the Minitest web app to collect any needed
-native build and launch the suite. Follow the printed steps in order, in the
-app's repository.
+If you are onboarding an app from scratch, run `minitest init` first, in the
+app's repository. It prints a short playbook covering only what is specific to
+the CLI entry point — authenticating, resolving the app that was already created
+for you, and where onboarding stops (the Minitest web app collects any needed
+native build and launches the suite). For the suite itself the playbook sends
+you to **[Designing a full test suite](#designing-a-full-test-suite)** below;
+follow that methodology rather than improvising one.
 
 ```bash
 minitest init            # prints the onboarding playbook (raw markdown when piped/non-interactive)
 minitest init --agent    # force raw markdown output regardless of context
 ```
 
-Conventions the playbook relies on:
-
-- **Map all the main paths**: enumerate ALL the key user journeys the app
-  genuinely warrants, not just a sample. Cover the happy paths AND, especially,
-  the paths that can break: failure states, validation errors, permission/auth
-  denials, empty states, and edge cases — these are what real testing must catch.
-  Write goal-oriented acceptance criteria (each criterion is a job to be done,
-  not a micro-step).
-- **Offline criteria**: word them as "Offline (wifi off)" — mobile cloud test
-  devices have no airplane mode, so never write "airplane mode".
-- **File seeding**: if a scenario needs a file available in the test environment,
-  `minitest test-file upload` it and bind it with
-  `minitest user-story-binding set-files` before runs.
-
-The sections below document each command the playbook refers to.
+The playbook is served by Minitap so it stays in step with the methodology; the
+CLI falls back to an embedded copy when it cannot reach the API (which is the
+normal case before `minitest auth login`).
 
 ## Designing a full test suite
 
@@ -123,6 +111,10 @@ commands already documented in this SKILL.md** — `test-profile create`,
 `user-story create` (with `--criteria`, `--profile`, `--depends-on`),
 `app-knowledge update`, and so on. There is no special apply command: the
 reviewed suite is replayed as regular CLI calls in dependency order.
+
+If a scenario needs a file available in the test environment, `minitest
+test-file upload` it and bind it with `minitest user-story-binding set-files`
+while applying the suite.
 
 ## Maintaining existing tests (`minitest maintenance`)
 
