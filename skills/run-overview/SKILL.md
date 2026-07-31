@@ -22,8 +22,17 @@ Resolve the batch id (the user's "last run" is the first entry from
 `minitest --json batch list`; a run URL contains the id), then run:
 
 ```bash
-minitest --json run verdicts <batch_id> --only-failed
+minitest --json run verdicts <batch_id> --actionable
 ```
+
+`--actionable` is the triage shape: it already keeps only criteria that failed
+or were unprocessable *and* are `critical` or `warning`, and it already drops
+replay-only fields (`confidence`, `buildId`, `recordingPath`, `sessionPaths`).
+Every row it returns is a candidate issue — do not re-derive that filter, and do
+not use `confidence` or infrastructure signals as a classification proxy. Each
+story carries `userStoryId` (stable scenario identity, used for
+`archive_scenario` and for grouping across runs) and `userStoryName`; use them
+as given rather than joining ids to names yourself.
 
 Use only facts from this output. If the failure mechanism is not clear enough
 to classify, re-read the batch with `--verbose`; do not guess.
