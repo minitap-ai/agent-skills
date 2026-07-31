@@ -10,90 +10,39 @@ connectivity, camera, multi-device simultaneity, or an identity/OTP.
 
 ## What Mini can and cannot do
 
-Mini is the Minitap testing agent. It drives real Android/iOS devices through the
-mobile-use CLI and executes acceptance criteria. Author scenarios ONLY within these
-capabilities — a criterion Mini cannot physically perform or observe will fail as
-unprocessable, not because the app is broken.
+Mini is the Minitap testing agent. It drives real Android, iOS and web sessions and executes acceptance criteria. A criterion Mini cannot physically perform or observe will fail as unprocessable, not because the app is broken.
 
-**What Mini can do on the device:**
+**What Mini can do:**
 
-- Gestures: tap (by label, coordinates, or percent), long-press, swipe, drag
-  (including pick-up drag with hold-before-move), pinch/zoom (scale or explicit
-  two-finger points).
-- Curved gestures (**Android, iOS and web**): trace an arbitrary path in a single
-  press-move-release — circles, arcs, loops, figure-eights, freeform curves.
-  Rotary dials, volume/brightness knobs, circular unlocks, pattern locks,
-  signature pads and arc sliders are all testable. On mobile, paths can be
-  anchored to an element's on-screen bounds, so they work on any screen size.
-- Text: type into the focused field or a targeted element, erase, press enter,
-  navigate back/home (Android).
-- Observation: screenshots (standard and high-res), compact or full UI hierarchy,
-  find elements by text/label, visual questions answered from the screen.
-- App lifecycle: launch, stop, open a URL/deep link, install a provided build.
-- Media & audio: play an audio file through the device microphone path and speak
-  text aloud (for voice-input flows). Web runs can also inject microphone audio
-  and transcribe browser speaker output to verify audio responses.
-- Camera (**web only**): the browser camera is simulated — a per-story image or
-  MP4 video is fed into it as the live webcam feed, so camera-based flows (e.g.
-  scanning a QR code, presenting a document) ARE testable in the web lane.
-- Files: push a file to the device (for upload/attachment flows, seeded via
-  story-bound test files).
-- Connectivity: toggle wifi on/off, switch airplane mode on/off, and read
-  connectivity state (**Android**); take the page offline and back online
-  (**web**). iOS runs cannot change connectivity.
-- Screen orientation (**Android and iOS**): rotate the device to landscape or
-  portrait to verify responsive layouts. Web runs keep the viewport they started
-  with — the stealth browser pins its window to the fingerprint it was launched
-  with, so pick the right viewport preset up front.
-- Device state: grant or revoke permissions without going through the system
-  prompt and switch between light and dark appearance (**Android, iOS and web**);
-  on iOS, also freeze the status bar to a fixed time/battery for stable
-  screenshots.
-- Push notifications (**iOS**): deliver an arbitrary notification payload to the
-  app under test, so notification-driven flows do not depend on a real backend
-  push. On Android, notifications must arrive organically.
-- Geolocation (**Android and iOS** cloud devices): mock the GPS position to any
-  coordinates, simulate movement along a route at a given speed, and restore the
-  real location. Web runs have no device location — the stealth browser blocks
-  the geolocation override. Caveat: apps that rely on
-  Play Services `GeofencingClient` transition callbacks may not react on Android
-  (Limrun runs microG, not real GMS) — apps reading location directly work fine.
-- Identity & email: read any `<prefix>@qa.minitap.ai` inbox at runtime (OTP codes,
-  verification links, magic links). Sign in with Google via the shared Minitap
-  account pool (leased at runtime, 2FA handled).
-- Replay: re-run previously captured trajectories to reach a known state faster.
-- Multi-device: a single scenario can drive **several devices at once** — up to
-  `min(3, the tenant's device quota)` — set by its device-count setting. Auto
-  (unset) resolves to one device per bound persona, minimum one — so a
-  sequential multi-persona scenario pins an explicit count of 1. The count is
-  decoupled from personas:
-  two devices for one persona (a session-conflict test — the same account signed
-  in twice) and one device for two personas (identities reused by signing in and
-  out) are both valid. With several devices live at once Mini can assert
-  **real-time cross-account behavior** — a message sent from account A on device 1
-  appears for account B on device 2 — which a single device cannot observe. Same
-  OS and same app on every device.
+- **Gestures:** tap (by label, coordinates or screen percentage), long-press, swipe, drag (including pick-up drag with a hold before the move), pinch and zoom. *(Android, iOS, web)*
+- **Curved gestures:** an arbitrary path in a single press-move-release — circles, arcs, loops, figure-eights. Rotary dials, knobs, circular unlocks, pattern locks, signature pads and arc sliders are all testable. *(Android, iOS, web)* **Android:** Paths anchor to an element's bounds. **iOS:** Paths anchor to an element's bounds.
+- **Text:** type into the focused field or a targeted element, erase, press enter. *(Android, iOS, web)* **Android:** Can also navigate back and home.
+- **Observation:** screenshots (standard and high-res), a compact or full UI hierarchy, finding elements by text or label, and visual questions. *(Android, iOS, web)*
+- **App lifecycle:** launch, stop, open a URL or deep link, install a provided build. *(Android, iOS)*
+- **Media & audio:** speak text aloud or play an audio file into the browser microphone, and transcribe what the browser's speakers output. *(web)*
+- **Camera:** the browser camera is simulated — a per-story image or MP4 is fed as the live webcam feed, so QR scanning and document presentation are testable. *(web)*
+- **Files:** push a file to the device for upload and attachment flows, seeded from story-bound test files. *(Android, iOS, web)*
+- **Connectivity:** change the network state mid-run. *(Android, web)* **Android:** Wifi on/off, airplane mode, and reading the connectivity state. **web:** Take the page offline and back online.
+- **Screen orientation:** rotate to landscape or portrait. *(Android, iOS)*
+- **Device state:** grant or revoke permissions without the system prompt, and switch between light and dark appearance. *(Android, iOS, web)* **iOS:** Can also freeze the status bar to a fixed time and battery for stable screenshots.
+- **Push notifications:** deliver an arbitrary payload to the app under test. *(iOS)*
+- **Geolocation** (cloud devices): mock GPS, simulate movement along a route at a given speed, and restore the real location. *(Android, iOS)* **Android:** Play Services `GeofencingClient` transition callbacks may not fire (cloud devices run microG, not real GMS); apps reading location directly work fine.
+- **Identity & email:** read any `<prefix>@qa.minitap.ai` inbox for OTP codes, verification links and magic links, and sign in with Google through the shared Minitap account pool (leased at runtime, 2FA handled). *(Android, iOS, web)*
+- **Replay:** re-run a previously captured trajectory to reach a known state faster. *(Android, iOS)*
+- **Multi-device:** up to `min(3, tenant device quota)` devices at once, set by the scenario's device-count setting. Auto resolves to one device per bound persona (minimum one), so a sequential multi-persona scenario pins an explicit count of 1. The count is decoupled from personas — two devices on one persona for session-conflict tests, or one device and two personas by signing in and out. This is what makes real-time cross-account behaviour assertable. Every device runs the same OS and the same app. *(Android, iOS)*
 
 **What Mini cannot do — never write criteria that require:**
 
-- Server-side, database, log, or analytics verification — only what is visible on
-  the device screen counts.
-- Receiving SMS or phone calls, or reading email outside `@qa.minitap.ai` inboxes.
-- Biometric authentication (fingerprint/Face ID), hardware buttons beyond
-  back/home, NFC, or Bluetooth pairing.
-- Camera input on **mobile** runs (no real-world scene capture there). The web
-  lane does NOT have this limit — see the simulated web camera above.
-- Toggling connectivity or airplane mode on iOS; rotating a web viewport or
-  mocking a location on web (the stealth browser pins both).
-- Pairing or interacting with a smartwatch, wearable, or other external hardware
-  (a second phone or tablet IS supported — see multi-device above).
-- Real payment card entry or purchases with real money (sandbox/test payment
-  flows only, when the app provides them).
-- Precise timing or gesture-velocity guarantees (e.g. "responds within 200ms",
-  "flick fast enough to fling the list to the end") — Mini can observe order and
-  outcomes, not millisecond latency, and gesture pacing is only approximate
-  (noticeably slower than requested on Android).
-
+- Server-side, database, log or analytics verification — only what is visible on screen counts. *(Android, iOS, web)*
+- Receive SMS or phone calls, or read email outside `@qa.minitap.ai` inboxes. *(Android, iOS, web)*
+- Biometric auth (fingerprint, Face ID), hardware buttons beyond back and home, NFC, or Bluetooth pairing. *(Android, iOS)*
+- Use camera input. *(Android, iOS)*
+- Feed audio into the microphone or hear what the app plays — the cloud device provider exposes no audio path, so voice-driven flows are web-only. *(Android, iOS)*
+- Toggle connectivity or airplane mode. *(iOS)*
+- Rotate the viewport or mock a location — the stealth browser pins the window to its fingerprint and blocks the geolocation override, so pick the right viewport preset up front. *(web)*
+- Pair with a smartwatch, wearable or other external hardware (a second phone or tablet IS supported). *(Android, iOS, web)*
+- Enter a real payment card or make a real-money purchase (sandbox flows only). *(Android, iOS, web)*
+- Guarantee precise timing or gesture velocity ("responds within 200ms", "flick fast enough to fling the list") — Mini observes order and outcomes, not millisecond latency, and gesture pacing is approximate. *(Android, iOS, web)* **Android:** Pacing is noticeably slower than requested.
 
 ## Device count
 
