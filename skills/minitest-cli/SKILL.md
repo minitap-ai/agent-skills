@@ -29,7 +29,7 @@ minitest [--json] [--app <APP_ID>] <subcommand> [args…] [subcommand flags…]
 
 ```bash
 minitest --json --app 713c6550-7d36-41aa-b1cd-3240b3a0dda1 user-story list
-minitest --json --app $APP run verdicts <batch_id> --only-failed
+minitest --json --app $APP run verdicts <batch_id> --actionable
 ```
 
 **Agents must always pass `--json`.** Without it the CLI prints Rich tables and
@@ -686,19 +686,33 @@ minitest --json --app <app_id> batch cancel <batch_id>         # cancels all pen
 
 `run verdicts` projects a batch into a compact, product-level pass/fail
 structure across all three grains — per-platform target roll-up, story ×
-platform outcome (with `skipReason`, `buildId`, `recordingPath`,
-`sessionPaths`), and per-criterion results (`status`, `criticality`,
-`failReason`, `resultSummary`, `confidence`). Use it instead of calling
-`batch get` + `run status` per story.
+platform outcome (with `skipReason`), and per-criterion results (`status`,
+`criticality`, `failReason`, `resultSummary`). Each story carries both
+`userStoryId` (stable scenario identity, safe to key issues on) and
+`userStoryName`. Use it instead of calling `batch get` + `run status` per story.
 
 ```bash
-minitest --json --app <app_id> run verdicts <batch_id> [--platform ios|android|web] [--only-failed] [--verbose]
+minitest --json --app <app_id> run verdicts <batch_id> [--platform ios|android|web] [--only-failed] [--actionable] [--verbose]
 ```
 
 By default only failing criteria are listed per story, evidence is omitted, and
-passing criteria appear only in the counters. `--verbose` includes evidence and
-passing criteria. Skipped stories carry `skipReason` and targets carry
-`skippedByCascade`, so a dependency-skipped story is not a failure.
+passing criteria appear only in the counters. Skipped stories carry `skipReason`
+and targets carry `skippedByCascade`, so a dependency-skipped story is not a
+failure.
+
+**`--actionable` is the flag to use for triage.** `--only-failed` filters on
+status alone, so cascade skips and passing-but-unprocessable leaves ride along —
+often nearly half the rows, which you then have to read and discard.
+`--actionable` keeps only criteria whose `status` is `failed` or
+`unprocessable` **and** whose `criticality` is `critical` or `warning`, and
+drops stories left with nothing.
+
+**`--verbose` is the replay/debug mode.** It adds evidence, passing criteria,
+and the artefacts needed to reconstruct a run — `buildId`, `recordingPath`,
+`sessionPaths`, and per-criterion `confidence`. Those are omitted by default:
+they are not triage signal, and `confidence` in particular must not be used as
+a proxy for classifying a failure. Reach for `--verbose` only once you have
+picked a specific failure to investigate.
 
 Submit feedback on a criterion result by its `resultId`. This is used for
 judgments such as marking an observed failure as expected behavior rather than
@@ -796,7 +810,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | List runs for story | `minitest --json --app ID run list "Story Name"`                                         |
 | List batches        | `minitest --json --app ID batch list`                                                    |
 | Get batch + runs    | `minitest --json --app ID batch get <batch_id>`                                          |
-| Batch verdicts (one call) | `minitest --json --app ID run verdicts <batch_id> [--platform P] [--only-failed] [--verbose]` |
+| Batch verdicts (one call) | `minitest --json --app ID run verdicts <batch_id> [--platform P] [--only-failed] [--actionable] [--verbose]` |
 | Submit result feedback | `minitest --json --app ID run feedback <result_id> "text"`                         |
 | Cancel batch        | `minitest --json --app ID batch cancel <batch_id>`                                       |
 | Auth                | `minitest auth login`, `minitest --json auth status`, `minitest auth logout`      |
