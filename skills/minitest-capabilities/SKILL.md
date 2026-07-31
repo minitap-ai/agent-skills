@@ -28,7 +28,7 @@ Mini is the Minitap testing agent. It drives real Android, iOS and web sessions 
 - **Text:** type into the focused field or a targeted element, erase, press enter. *(Android, iOS, web)* **Android:** Can also navigate back and home.
 - **Observation:** screenshots (standard and high-res), a compact or full UI hierarchy, finding elements by text or label, and visual questions. *(Android, iOS, web)*
 - **App lifecycle:** launch, stop, open a URL or deep link, install a provided build. *(Android, iOS)*
-- **Media & audio:** play an audio file into the app and speak text aloud. *(Android, iOS, web)* **web:** Injects microphone audio and transcribes browser speaker output. **Android:** Audio is played through the device microphone path. **iOS:** Audio is played through the device microphone path.
+- **Media & audio:** speak text aloud or play an audio file into the browser microphone, and transcribe what the browser's speakers output. *(web)*
 - **Camera:** the browser camera is simulated — a per-story image or MP4 is fed as the live webcam feed, so QR scanning and document presentation are testable. *(web)*
 - **Files:** push a file to the device for upload and attachment flows, seeded from story-bound test files. *(Android, iOS, web)*
 - **Connectivity:** change the network state mid-run. *(Android, web)* **Android:** Wifi on/off, airplane mode, and reading the connectivity state. **web:** Take the page offline and back online.
@@ -46,6 +46,7 @@ Mini is the Minitap testing agent. It drives real Android, iOS and web sessions 
 - Receive SMS or phone calls, or read email outside `@qa.minitap.ai` inboxes. *(Android, iOS, web)*
 - Biometric auth (fingerprint, Face ID), hardware buttons beyond back and home, NFC, or Bluetooth pairing. *(Android, iOS)*
 - Use camera input. *(Android, iOS)*
+- Feed audio into the microphone or hear what the app plays — the cloud device provider exposes no audio path, so voice-driven flows are web-only. *(Android, iOS)*
 - Toggle connectivity or airplane mode. *(iOS)*
 - Rotate the viewport or mock a location — the stealth browser pins the window to its fingerprint and blocks the geolocation override, so pick the right viewport preset up front. *(web)*
 - Pair with a smartwatch, wearable or other external hardware (a second phone or tablet IS supported). *(Android, iOS, web)*
