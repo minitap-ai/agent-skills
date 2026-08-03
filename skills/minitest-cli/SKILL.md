@@ -340,15 +340,21 @@ minitest --json --app <app_id> user-story create \
 > until you know how this app expects payment to be exercised. The hard limit is
 > narrow — the tester never enters a real card and never makes a real-money
 > purchase — but everything short of that is testable: sandbox and test cards,
-> RevenueCat sandbox for in-app purchases and subscriptions, and whatever custom
-> payment flow the app uses. What breaks a run is guessing, not the payment step
-> itself.
+> in-app purchases and subscriptions through the RevenueCat Test Store or an
+> Apple/Google platform sandbox, and whatever custom payment flow the app uses.
+> What breaks a run is guessing, not the payment step itself.
 >
 > So when you find a paid flow during codebase analysis, ask the user which
-> applies: a test card and its number, a RevenueCat sandbox account, a bypass or
-> promo code, a staging payment provider, or nothing — in which case the story
-> stops before the charge and says so in its last criterion. Record the answer
-> where the tester will read it at run time: the flow type's `--usage-prompt`
+> applies: a test card and its number, a build wired to the RevenueCat Test Store
+> with its Test Store API key, an Apple or Google platform sandbox account, a
+> bypass or promo code, a staging payment provider, or none of these — in which
+> case the story stops before the charge and says so in its last criterion. The
+> two RevenueCat environments are not interchangeable, so record which one this
+> build uses: the Test Store mocks billing entirely and needs no store setup,
+> while a platform sandbox drives the real App Store or Play purchase flow.
+>
+> Record the answer where the tester will read it at run time: the flow type's
+> `--usage-prompt`
 > (e.g. `"Paid plans are sandboxed: use card 4242 4242 4242 4242."`), the app
 > knowledge, or the persona's `--about`.
 >
