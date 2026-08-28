@@ -333,6 +333,17 @@ minitest --json --app <app_id> user-story create \
   --criteria "The order history screen is displayed"
 ```
 
+`--idempotency-key` is optional. For an automated create, derive one stable
+operation ID for the logical create and pass it as `--idempotency-key` on every
+attempt. Never generate a fresh operation ID when retrying the same logical
+create. Keys are opaque, case-sensitive strings of 1–255 characters inclusive;
+do not normalize, trim, or change their case between attempts.
+
+Minitest stores a keyed creation durably: an equivalent replay returns the
+identical Story, criterion, and criterion-version IDs, while reusing the key for
+different content returns HTTP 409. Omitting `--idempotency-key` preserves the
+legacy, non-idempotent create behavior.
+
 **User story types:** `login`, `registration`, `checkout`, `onboarding`,
 `search`, `settings`, `navigation`, `form`, `profile`, `other`, `custom`.
 
@@ -802,6 +813,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Create native app   | `minitest --json apps create --name "My App" --platform ios --platform android [--tenant ID] [--description ...] [--slug ...] [--icon ./icon.png]` |
 | Create web app      | `minitest --json apps create --name "My Web App" --platform web --web-url https://example.com [--tenant ID]` |
 | Create user story   | `minitest --json --app ID user-story create --name "..." --type login --criteria "..."` |
+| Retry-safe Story creation | `minitest --json --app ID user-story create --name "..." --type login --criteria "..." --idempotency-key <stable-operation-id>` (derive once; reuse exactly for every retry) |
 | Create user story with profile | `minitest --json --app ID user-story create --name "..." --type login --profile <profile_id> --criteria "..."` |
 | List user stories   | `minitest --json --app ID user-story list`                                               |
 | Update user story   | `minitest --json --app ID user-story update <id> --add-criteria "..."`                   |
