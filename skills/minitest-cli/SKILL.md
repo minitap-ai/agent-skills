@@ -1091,6 +1091,12 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Clear story profile | `minitest --json --app ID user-story-binding set-profile <story_id> --clear`             |
 | Bind files to story | `minitest --json --app ID user-story-binding set-files <story_id> --file <id> --file <id>` |
 | List story files    | `minitest --json --app ID user-story-binding list-files <story_id>`                      |
+| List draft features | `minitest --json --app ID df list [--status open] [--status merged]`                     |
+| Open a draft feature | `minitest --json --app ID df create --title "..." [--description "..."]`                |
+| See what a branch changes | `minitest --json --app ID df show <id> --view diff`                                |
+| See the suite a branch would run | `minitest --json --app ID df show <id> --view effective`                    |
+| Write to a branch   | `minitest --json --app ID df apply <id> --changeset ./changeset.json`                    |
+| Abandon a branch    | `minitest --json --app ID df delete <id> --force`                                        |
 
 ## Test profiles, test files, and story bindings
 
@@ -1109,6 +1115,74 @@ Bindings link profiles or files to a specific user story:
 - Profile binding: at most one profile per story. `set-profile --clear` unbinds.
 - File binding: many files per story. `set-files` is **atomic replace** — pass
   every file id you want bound; omitted ids are unbound. `--clear` unbinds all.
+
+## Draft features (`minitest df`)
+
+A draft feature is a **branch of the app's test suite**: the tests a product
+change will need, written before that change ships. It holds a *delta* against
+main — new stories, edited ones, deletions, dependency changes — never a copy of
+main. Everything you do to a branch goes through one atomic call, so a branch is
+never half-written.
+
+```bash
+minitest --json --app $APP df list --status open
+minitest --json --app $APP df create --title "Guest checkout" \
+  --description "Behind the CHECKOUT_GUEST flag; needs a fresh cart per run."
+minitest --json --app $APP df show $DF --view diff        # what it changes
+minitest --json --app $APP df show $DF --view effective   # the suite it would run
+minitest --json --app $APP df apply $DF --changeset ./changeset.json
+minitest --json --app $APP df delete $DF --force          # abandon, keeps history
+```
+
+`show --view diff` is the branch as a list of operations, in the same vocabulary
+`apply` accepts — read a branch, reason about it, write the correction back
+without translating. `--view effective` is the resolved suite: main with the
+branch folded in, which is what a run against this branch would execute.
+
+### Writing to a branch
+
+`apply` takes a JSON file containing the whole request body:
+
+```json
+{
+  "expectedMainRev": 7,
+  "idempotencyKey": "add-guest-checkout-1",
+  "ops": [
+    { "op": "story.create", "tmpId": "guest", "fields": { "name": "Guest checkout", "type": "checkout" }, "criteria": ["Order completes without an account"] },
+    { "op": "criterion.edit", "criterionId": "…", "expectedVersion": "…", "content": "…" },
+    { "op": "dep.add", "childRef": "guest", "parentRef": "…" }
+  ]
+}
+```
+
+The eight operations are `story.create` / `story.edit` / `story.delete`,
+`criterion.create` / `criterion.edit` / `criterion.delete`, and `dep.add` /
+`dep.remove`. Three things to know:
+
+- **Name main, not the branch.** Ops refer to the ids you see on the main suite.
+  The server copies a story into the branch the first time you touch it; you
+  never handle the copy's id. `tmpId` is only for binding ops to each other
+  inside one batch (a `dep.add` pointing at a story the same batch creates).
+- **Send the tokens you read.** `expectedMainRev` comes from `df show --view
+  diff`; if main moved since that read, the apply is refused with 409 instead of
+  landing on a suite you did not look at. Per-entity `expectedVersion` works the
+  same way. Both are optional, and omitting them means writing blind.
+- **Retries are free.** Reusing an `idempotencyKey` returns the first response
+  rather than applying twice.
+
+Semantics worth stating: `story.edit` fields you omit are left alone, whereas an
+explicit `null` clears them. A batch is all-or-nothing, and a batch whose
+dependency edges would close a cycle is rejected whole.
+
+### Branch state
+
+Two independent axes. `status` is `open` → `merging` → `merged`, or `abandoned`.
+`rebaseState` is `in_sync` / `pending` / `rebasing` / `conflicts` and says
+whether the branch has caught up with main. A branch is runnable only when it is
+`open` **and** `in_sync`. `apply` is refused while `rebasing` (the branch is
+being recomputed) and accepted while `conflicts` — resolving a conflict *is* an
+apply. `df delete` abandons a branch without erasing it: the rows stay for audit
+and drop out of every read.
 
 ## Environment variables
 
