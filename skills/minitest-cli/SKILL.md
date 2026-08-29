@@ -227,13 +227,21 @@ Treat `MINITEST_API_KEY` as a credential. Never commit it; rotate on suspected l
 
 ## Exit Codes
 
-| Code | Meaning                 |
-| ---- | ----------------------- |
-| 0    | Success                 |
-| 1    | General error           |
-| 2    | Authentication required |
-| 3    | Network / API error     |
-| 4    | Resource not found      |
+| Code | Meaning                                 |
+| ---- | --------------------------------------- |
+| 0    | Success                                 |
+| 1    | General error                           |
+| 2    | Authentication required                 |
+| 3    | Network / API error                     |
+| 4    | Resource not found                      |
+| 5    | Build rejected as invalid               |
+| 6    | Conflict — re-read, rebuild, retry once |
+
+Only 3 is worth a blind retry. **6 is not a transport failure**: something you
+based the call on moved (a stale `expectedMainRev`, an `expectedVersion` that no
+longer matches, a branch mid-rebase). Re-read the resource, rebuild the request
+against what it now returns, and try **once** more — retrying the same body
+loops forever.
 
 ## Core Workflow
 
@@ -1161,8 +1169,12 @@ The eight operations are `story.create` / `story.edit` / `story.delete`,
 
 - **Name main, not the branch.** Ops refer to the ids you see on the main suite.
   The server copies a story into the branch the first time you touch it; you
-  never handle the copy's id. `tmpId` is only for binding ops to each other
-  inside one batch (a `dep.add` pointing at a story the same batch creates).
+  never handle the copy's id. `tmpId` binds ops to each other inside one batch
+  (a `dep.add` pointing at a story the same batch creates), and it is also how
+  `show --view diff` names every story the branch invented — which is what makes
+  that output replayable onto another branch as-is.
+- **Unknown keys are rejected.** A misspelt field is a 422, not a silent drop, so
+  a changeset you hand-edited fails loudly instead of half-applying.
 - **Send the tokens you read.** `expectedMainRev` comes from `df show --view
   diff`; if main moved since that read, the apply is refused with 409 instead of
   landing on a suite you did not look at. Per-entity `expectedVersion` works the
@@ -1182,7 +1194,7 @@ whether the branch has caught up with main. A branch is runnable only when it is
 `open` **and** `in_sync`. `apply` is refused while `rebasing` (the branch is
 being recomputed) and accepted while `conflicts` — resolving a conflict *is* an
 apply. `df delete` abandons a branch without erasing it: the rows stay for audit
-and drop out of every read.
+and drop out of `df list` unless you ask for them with `--status abandoned`.
 
 ## Environment variables
 
