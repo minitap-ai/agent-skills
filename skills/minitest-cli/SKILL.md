@@ -231,11 +231,14 @@ Treat `MINITEST_API_KEY` as a credential. Never commit it; rotate on suspected l
 | ---- | --------------------------------------- |
 | 0    | Success                                 |
 | 1    | General error                           |
-| 2    | Authentication required                 |
+| 2    | Authentication required (`auth` commands) |
 | 3    | Network / API error                     |
 | 4    | Resource not found                      |
 | 5    | Build rejected as invalid               |
 | 6    | Conflict — re-read, rebuild, retry once |
+
+Credentials rejected on a normal command exit 1, not 2 — only the `auth`
+commands themselves use 2.
 
 Only 3 is worth a blind retry. **6 is not a transport failure**: something you
 based the call on moved (a stale `expectedMainRev`, an `expectedVersion` that no
