@@ -619,6 +619,48 @@ minitest --json --app <app_id> build list --platform ios --page-size 1
 Pass `--platform ios|android` to `build upload` when the filename does not end
 in `.ipa` / `.apk` and auto-detection cannot fire.
 
+For a repo-connected app, queue a build directly from GitHub without starting
+tests:
+
+```bash
+minitest --json --app <app_id> build from-commit [<full_sha>] \
+  [--platform ios|android|web] [--platform ...] [--force-full]
+```
+
+The SHA is optional. When omitted, apps-manager resolves the default branch's
+HEAD. When supplied, it must be the full 40-character lowercase hexadecimal
+SHA. `--force-full` bypasses incremental build caches. Inspect failures with
+`build list --status failed`; use `--kind web` for web builds because web rows
+may have no `platform`, and therefore are not selected by `--platform web`.
+
+`build list` returns completed builds only unless you pass `--status`, so always
+use `--status failed` to see failures at all. `--status` is repeatable.
+
+Every item in the `build list` JSON carries a `guidance` object next to the raw
+envelope fields. It is `null` when the build did not fail, so the key is always
+present:
+
+```json
+{ "source": "fix_prompt", "text": "..." }
+```
+
+`source` tells you how much to trust `text`. Read it before acting:
+
+| `source` | Meaning |
+|---|---|
+| `fix_prompt` | Machine-authored and actionable. Act on it directly. |
+| `remediation` | Human-readable next step. Reliable, less specific. |
+| `summary` | One-line classification only. Investigate before changing code. |
+| `raw` | Unstructured builder stderr, no envelope was recorded. May be a stale heartbeat or a timeout rather than a real defect. Treat as a lead, not a diagnosis. |
+| `withheld` | An internal failure we deliberately suppressed. Nothing for you to fix: retry the build, escalate if it persists. |
+| `none` | No failure details were recorded at all. |
+
+Guidance falls back down that ladder, so `raw` only appears when no fix prompt,
+remediation, or summary exists. When `source` is `withheld` the CLI also blanks
+`errorSummary` and nulls `errorRemediation`, `errorFixPrompt`, and `errorRaw` on
+that item, so there is nothing to dig into. Otherwise the envelope fields are
+left untouched alongside `guidance`.
+
 ### 5. Run tests
 
 Execute a user story on either native lanes or the web lane. For native runs,
@@ -655,6 +697,11 @@ minitest --json --app <app_id> run all \
 # Run ALL user stories on web targets only
 minitest --json --app <app_id> run all --web
 
+# Build a required commit SHA and run its suite, polling by default
+minitest --json --app <app_id> run from-commit <full_sha> \
+  [--platform ios|android|web] [--platform ...] \
+  [--user-story <id-or-name>] [--no-watch] [--timeout <seconds>]
+
 # Cancel a running or pending run
 minitest --json --app <app_id> run cancel <run_id>
 ```
@@ -666,6 +713,12 @@ only `{"runId": …, "status": …}`.
 `--web` requires a web execution target configured on the app in the Minitest
 web app; without one the run is refused even though the app was created with
 `--platform web --web-url …`.
+
+`run from-commit` requires a full SHA and polls the batch until a verdict unless
+`--no-watch` is passed. Its initial response can legitimately contain no story
+runs while the commit build is being prepared. For a web-only app, explicitly
+pass `--platform web`: omitting platforms defaults server-side to iOS and
+Android. Failed web builds currently may have no error envelope or fix prompt.
 
 ### 6. Check results
 
@@ -736,13 +789,97 @@ they are not triage signal, and `confidence` in particular must not be used as
 a proxy for classifying a failure. Reach for `--verbose` only once you have
 picked a specific failure to investigate.
 
-Submit feedback on a criterion result by its `resultId`. This is used for
-judgments such as marking an observed failure as expected behavior rather than
-an app defect:
+Submit feedback on a criterion result by its `resultId`. This records a verdict
+judgment such as "not a bug" or expected behavior. It does not mark an app issue
+as fixed:
 
 ```bash
 minitest --json --app <app_id> run feedback <result_id> "Not a bug: expected behavior for this account"
 ```
+
+### 9. Read open issues and fix prompts
+
+`issues list` returns the findings to fix as JSON, including each issue's
+`fixPrompt` and exact webapp `deeplink`. It always emits JSON, regardless of the
+global `--json` flag.
+
+```bash
+minitest --app <app_id> issues list
+minitest --app <app_id> issues list --issue <failure_id>
+minitest --app <app_id> issues list --run <story_run_id>
+minitest --app <app_id> issues list --batch <batch_id>
+minitest --app <app_id> issues list [--platform ios|android|web] [--criticality critical|warning] [--include-resolved]
+```
+
+Choose at most one of `--issue`, `--run`, and `--batch`. With no scope flag,
+the command uses the latest batch. Its `scope` block then reports
+`otherBatchesWithOpenIssues` and `openIssuesInOtherBatches`, so an agent can
+offer to inspect older batches without prompting interactively.
+
+The CLI never widens scope or asks an interactive question. If either widen
+counter is non-zero, report the current result and the option to inspect older
+batches without blocking for input. Use `batch list` to obtain batch IDs, then
+call `issues list --batch <batch_id>` only when wider scope is requested.
+
+The response has three blocks:
+
+- `scope`: selected scope and filters, plus the non-interactive widen counters.
+- `build`: attached provenance and failed-build details.
+- `issues`: findings with per-issue `fixPrompt` and exact `deeplink`.
+
+There is no top-level count field. Count the findings with `jq '.issues | length'`.
+An empty `issues` array with exit code 0 means nothing to fix; it is not an error.
+
+Build provenance uses only attached metadata: commit SHA first, then app version
+and build number, then `no build info attached`. It does not inspect repository
+history or compute commits ahead. Failed code builds may carry a build-level fix
+prompt. Fix prompts from infrastructure failures are withheld.
+
+Mark one or more app findings as fixed with their failure IDs:
+
+```bash
+minitest --app <app_id> issues fix <failure_id> [<failure_id> ...]
+```
+
+`issues fix` always returns JSON with one result per ID and continues after an
+individual failure. Use it only after the app defect has been fixed. This is
+different from `run feedback <result_id> "Not a bug: ..."`, which records that a
+criterion result was expected behavior and does not close a fixed app defect.
+
+The payload is `{"results": [...], "fixed": N, "failed": N}`. `results` carries
+one entry per ID in the order given: `{"issueId": "...", "status": "fixed"}` when
+the finding was closed, `{"issueId": "...", "status": "failed", "error": "..."}`
+when it was not. The JSON is always printed, including on a non-zero exit, so
+parse it rather than reading the exit code alone.
+
+Exit codes:
+
+| Situation | Exit |
+|-----------|------|
+| Every ID closed | 0 |
+| At least one closed and at least one failed | 1 |
+| Every ID failed, all not found | 4 |
+| Every ID failed, all unauthorized | 2 |
+| Every ID failed, at least one network error | 3 |
+| Every ID failed, any other mix (malformed ID, feedback still processing, server error) | 1 |
+
+A partial failure always exits 1, even when every failed ID was a 404, so a
+stale ID mixed into a batch of good ones turns the whole call non-zero. Check
+`failed` and the per-ID `error` strings to tell a stale ID apart from a real
+problem, and retry only the IDs whose `status` is `failed`.
+
+Webapp links are input hints for the agent, not CLI arguments. Extract IDs from
+the known routes, set `--app` from `app_id`, and pass only IDs to the CLI:
+
+```text
+/t/{tenant}/apps/{app_id}/test/runs/{batch_id}?flow={user_story_id}
+/t/{tenant}/apps/{app_id}/test/issues?issueId={failure_id}
+```
+
+From a run URL, use `batch_id` with `run verdicts` or `issues list --batch`, and
+use the optional `flow` value as the user story ID when needed. From an issue
+URL, use `issueId` with `issues list --issue` or `issues fix`. The CLI itself
+never parses webapp URLs.
 
 ## CI / Automation Pattern
 
@@ -822,17 +959,21 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Remove an env var   | `minitest --json --app ID env unset <KEY> --yes [--dry-run]`                             |
 | Clear all env vars  | `minitest --json --app ID env clear --yes [--dry-run]`                                   |
 | Upload native build | `minitest --json --app ID build upload ./app.apk`                                        |
-| List builds         | `minitest --json --app ID build list`                                                    |
+| List builds         | `minitest --json --app ID build list [--platform P] [--status S] [--kind K]`            |
+| Build from GitHub commit | `minitest --json --app ID build from-commit [SHA] [--platform P] [--force-full]`   |
 | Run one native story| `minitest --json --app ID run start "Story Name" --ios-build X --android-build Y`        |
 | Run one web story   | `minitest --json --app ID run start "Story Name" --web`                                 |
 | Run all native stories | `minitest --json --app ID run all --ios-build X --android-build Y`                    |
 | Run all web stories | `minitest --json --app ID run all --web`                                                 |
+| Build and run commit | `minitest --json --app ID run from-commit SHA [--platform P] [--user-story ID] [--no-watch] [--timeout N]` |
 | Cancel a run        | `minitest --json --app ID run cancel <run_id>`                                           |
 | Check run           | `minitest --json --app ID run status <run_id>`                                           |
 | List runs for story | `minitest --json --app ID run list "Story Name"`                                         |
 | List batches        | `minitest --json --app ID batch list`                                                    |
 | Get batch + runs    | `minitest --json --app ID batch get <batch_id>`                                          |
 | Batch verdicts (one call) | `minitest --json --app ID run verdicts <batch_id> [--platform P] [--only-failed] [--actionable] [--verbose]` |
+| List issues and fix prompts | `minitest --app ID issues list [--issue ID \| --run ID \| --batch ID] [--platform P] [--criticality C] [--include-resolved]` |
+| Mark app issues fixed | `minitest --app ID issues fix <failure_id> [<failure_id> ...]`                          |
 | Submit result feedback | `minitest --json --app ID run feedback <result_id> "text"`                         |
 | Cancel batch        | `minitest --json --app ID batch cancel <batch_id>`                                       |
 | Auth                | `minitest auth login`, `minitest --json auth status`, `minitest auth logout`      |
