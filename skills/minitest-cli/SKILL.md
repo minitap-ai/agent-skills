@@ -876,6 +876,10 @@ the known routes, set `--app` from `app_id`, and pass only IDs to the CLI:
 /t/{tenant}/apps/{app_id}/test/issues?issueId={failure_id}
 ```
 
+Despite the path segment, `/test/runs/{batch_id}` carries a **batch id**, not a
+story-run id. Route it to `--batch` directly; passing it to `issues list --run`
+fails with a plain "StoryRun not found" that gives no hint of the mistake.
+
 From a run URL, use `batch_id` with `run verdicts` or `issues list --batch`, and
 use the optional `flow` value as the user story ID when needed. From an issue
 URL, use `issueId` with `issues list --issue` or `issues fix`. The CLI itself
