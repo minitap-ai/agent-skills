@@ -627,7 +627,7 @@ minitest --json --app <app_id> build from-commit [<full_sha>] \
   [--platform ios|android|web] [--platform ...] [--force-full]
 ```
 
-The SHA is optional. When omitted, apps-manager resolves the default branch's
+The SHA is optional. When omitted, the platform resolves the default branch's
 HEAD. When supplied, it must be the full 40-character lowercase hexadecimal
 SHA. `--force-full` bypasses incremental build caches. Inspect failures with
 `build list --status failed`; use `--kind web` for web builds because web rows
