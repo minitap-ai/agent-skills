@@ -615,6 +615,62 @@ minitest --json app-knowledge update --app <app_id> --content-file ./app-knowled
 prints the new `versionNumber` to stdout (full record with `--json`). Each
 update creates a new prompt version — there is no rollback shortcut.
 
+### 3b. See what exploration actually mapped (`minitest screens`)
+
+Before you invent scenarios for an app, read the screen map: it is the list of
+screens the exploration crawl genuinely stood on, so it tells you what the app
+really contains instead of what its name or flow types imply.
+
+```bash
+# Every mapped screen, shallowest first
+minitest --app <app_id> screens list
+
+# One platform only
+minitest --app <app_id> screens list --platform ios
+
+# The navigation shape — the fastest way to see where a crawl stopped
+minitest --app <app_id> screens list --tree
+
+# Only the screens the crawl could not get past
+minitest --app <app_id> screens list --blocked
+
+# One screen: how to reach it, and where it leads
+minitest --app <app_id> screens get "Onboarding age"
+```
+
+`screens list` wraps `GET /api/v1/apps/{app_id}/screens`, which returns the
+whole map in one call (screenshots are signed in a single batch). Filtering by
+`--platform` is server-side; `--area` and `--blocked` are applied client-side
+over that one response.
+
+With `--json` the command returns the map itself, and `screenCount` always
+matches the `screens` array beside it (so a filtered call reports the filtered
+count, not the server total). `--tree` is a human rendering only — under
+`--json` it is ignored and you get the same map object, whose `outgoing` edges
+carry the graph. Note the casing seam inherited from the API: the envelope is
+camelCase (`screenKey`, `displayName`) while `outgoing` and `context` are
+snake_case (`to_screen_key`, `parked_reason`, `requires_auth`).
+
+**Read the frontier line**, printed under the table. It reports three things
+that each mean something different:
+
+| Signal | Meaning |
+| ------ | ------- |
+| *parked edge* | The crawl saw a way onward and deliberately did not follow it (a duplicate branch, a login wall, a non-navigating toggle). Parked edges are the unexplored frontier. |
+| *blocked screen* | The crawl reached the screen but could not get past it. `screens get` shows the reason, and the ask gating it. |
+| *edge leading to a screen with no row* | The crawl recorded a step to a destination that was never written as a screen — usually the destination was named slightly differently than the screen later called itself. The map understates what was reached. |
+
+Two shapes worth recognising in `--tree` output:
+
+- **A long unbranching chain** — exploration never escaped a funnel (typically
+  onboarding). Scenarios written from this map will all be onboarding scenarios.
+- **A wide, shallow tree** — exploration never got past the lobby, usually
+  because of auth. Check `screens get` for `Requires auth`.
+
+An empty result is not an error. It means no crawl has run against a build for
+this app yet — the map is written by exploration as it walks, so it stays empty
+until then.
+
 ### 4. Upload native builds
 
 For iOS/Android apps, upload your `.apk` (Android) or `.ipa` (iOS) build
@@ -983,6 +1039,10 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Create custom flow type | `minitest --json flow-types create --name "Subscription" [--usage-prompt "..."] [--icon tag] [--color gray]` |
 | Rename custom flow type | `minitest --json flow-types update "Subscription" --name "Billing"`                  |
 | Delete custom flow type | `minitest --json flow-types delete "Billing" --yes` (its stories fall back to `other`) |
+| List mapped screens | `minitest --json --app ID screens list [--platform ios]`                                 |
+| See the crawl's shape | `minitest --app ID screens list --tree`                                                |
+| Screens the crawl was blocked on | `minitest --json --app ID screens list --blocked`                           |
+| Inspect one screen  | `minitest --json --app ID screens get "Onboarding age"`                                  |
 | Read app knowledge  | `minitest --json app-knowledge get --app ID`                                             |
 | Update app knowledge| `minitest --json app-knowledge update --app ID --content-file ./knowledge.md`            |
 | List env vars       | `minitest --json --app ID env list` (values masked; `--show` reveals)                    |
