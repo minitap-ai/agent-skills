@@ -724,7 +724,10 @@ SHA. `--force-full` bypasses incremental build caches. Inspect failures with
 may have no `platform`, and therefore are not selected by `--platform web`.
 
 `build list` returns completed builds only unless you pass `--status`, so always
-use `--status failed` to see failures at all. `--status` is repeatable.
+use `--status failed` to see failures at all. `--status` is repeatable. Valid
+values: `pending` | `completed` | `failed` | `cancelled` — there is no
+`running` status; an in-progress build is tracked via a separate heartbeat,
+not a status value, so poll `build list` without `--status running`.
 
 Every item in the `build list` JSON carries a `guidance` object next to the raw
 envelope fields. It is `null` when the build did not fail, so the key is always
