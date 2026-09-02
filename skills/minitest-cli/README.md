@@ -39,8 +39,9 @@ npx skills add minitap-ai/agent-skills --skill minitest-cli
 
 This skill has two distinct writers; keep them separate:
 
-- **Hand-maintained:** `SKILL.md`, `README.md`, and `metadata.json`. Edit these
-  by hand.
+- **Hand-maintained:** `SKILL.md`, `README.md`, `metadata.json`, and everything
+  under `commands/` — the deep-dive guides for command groups whose contract is
+  too long to keep in the prompt. Edit these by hand.
 - **Machine-generated:** everything under `reference/`. Those files are rendered
   by the testing-service CI (each begins with
   `<!-- rendered by Minitap — do not edit -->`) and must not be
