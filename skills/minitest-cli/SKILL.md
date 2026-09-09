@@ -400,6 +400,16 @@ printf "%s" "$PASSWORD" | `minitest --json --app $APP test-profile create \
 
 **No persona bound.** If a story has no profile, the agent defaults to anonymous (skip login). If a flow forces authentication, it self-generates a `<random>@qa.minitap.ai` with a runtime password, signs up, and reads the inbox for the confirmation/OTP code — so unbound scenarios still work without you provisioning anything.
 
+**Phone-OTP personas.** If the app authenticates via SMS one-time codes instead of email, set `--phone-number` (E.164, e.g. `+14155551234`) and `--static-otp-code` (the fixed code the customer's backend accepts for that number) instead of `--username`/`--password`:
+
+```bash
+printf "%s" "$OTP_CODE" | minitest --json --app $APP test-profile create \
+  --name "Driver" --phone-number "+14155551234" --static-otp-code-stdin \
+  --about "Verified driver, active delivery in progress"
+```
+
+Ask the user for the whitelisted phone number and its fixed OTP code — these must be pre-provisioned in the customer's backend, the same way a bring-your-own-account password is.
+
 Fill the `about` field with what makes each profile distinct (e.g. "Pro subscription active, has saved items, payment method on file"). This context is injected into the tester agent's prompt at run time.
 
 If the app uses a third-party auth provider (e.g. Google OAuth), a shared Minitap account covers that flow — bind it to the relevant story instead of creating a new profile. Those shared pool addresses are also `@qa.minitap.ai`, so their inboxes are readable the same way.
@@ -1089,9 +1099,10 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Get test profile    | `minitest --json --app ID test-profile get <profile_id>`                                 |
 | List shared profiles| `minitest --json test-profile list-shared` (Minitap-provided pool; currently Google account only) |
 | Create test profile | `minitest --json --app ID test-profile create --name "..." --username "..." --password-stdin` |
+| Create phone-OTP profile | `minitest --json --app ID test-profile create --name "..." --phone-number "+1..." --static-otp-code-stdin` |
 | Set default profile | `minitest --json --app ID test-profile set-default <profile_id>` |
 | Clear default profile | `minitest --json --app ID test-profile clear-default` |
-| Update test profile | `minitest --json --app ID test-profile update <id> [--name ...] [--clear-password]`      |
+| Update test profile | `minitest --json --app ID test-profile update <id> [--name ...] [--clear-password] [--phone-number ...] [--clear-static-otp-code]` |
 | Delete test profile | `minitest --json --app ID test-profile delete <id> --force`                              |
 | List test files     | `minitest --json --app ID test-file list [--kind image\|document\|video\|audio\|other]`  |
 | Upload test file    | `minitest --json --app ID test-file upload ./local/file.pdf --note "..."`                |
@@ -1106,10 +1117,11 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 
 ## Test profiles, test files, and story bindings
 
-Test profiles let you store credentials (username/password/about) that the agent
-will use when running a user story. They are app-scoped by default. Shared
-profiles are Minitap-provided accounts available to all test-enabled tenants and
-surface via `list-shared` (currently only a Google account).
+Test profiles let you store credentials (username/password/about, or
+phone-number/static-otp-code for phone-OTP personas) that the agent will use
+when running a user story. They are app-scoped by default. Shared profiles are
+Minitap-provided accounts available to all test-enabled tenants and surface via
+`list-shared` (currently only a Google account).
 
 Test files are arbitrary blobs (max 25 MB; image/video/audio/document/other) that
 get pushed into the test environment before the agent runs the story. Use them
@@ -1181,3 +1193,19 @@ printf "%s" "$MY_PASSWORD" | `minitest --json --app $APP test-profile create \
 
 The two flags are mutually exclusive. To wipe an existing password, use
 `update --clear-password`.
+
+### Static OTP codes on the CLI
+
+Same pattern for phone-OTP personas: `--static-otp-code` accepts an inline
+value, `--static-otp-code-stdin` reads it from stdin instead (mutually
+exclusive with each other). `--phone-number` is not a secret and can be passed
+inline safely.
+
+```bash
+printf "%s" "$OTP_CODE" | minitest --json --app $APP test-profile update <id> \
+  --phone-number "+14155551234" --static-otp-code-stdin
+```
+
+To wipe an existing static OTP code, use `update --clear-static-otp-code`
+(mutually exclusive with `--static-otp-code`/`--static-otp-code-stdin` on the
+same invocation).
