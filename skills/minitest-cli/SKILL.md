@@ -387,7 +387,7 @@ minitest --json --app $APP test-profile create \
   --about "Pro subscription active, has saved items, payment method on file"
 ```
 
-A non-`@qa.minitap.ai` username with no password is rejected — keep the domain (or leave the username blank to auto-generate one).
+A non-`@qa.minitap.ai` username with no password is rejected *unless* the profile also carries `--phone-number` or `--static-otp-code` — those personas have their own way to sign in, so keep the address as given. Otherwise keep the `@qa.minitap.ai` domain (or leave the username blank to auto-generate one).
 
 **Bring-your-own account.** Only when the user supplies a real account they own (and the app needs a password) pass both, via stdin:
 
@@ -408,7 +408,7 @@ printf "%s" "$OTP_CODE" | minitest --json --app $APP test-profile create \
   --about "Verified driver, active delivery in progress"
 ```
 
-Ask the user for the whitelisted phone number and its fixed OTP code — these must be pre-provisioned in the customer's backend, the same way a bring-your-own-account password is.
+Ask the user for the whitelisted phone number and its fixed OTP code — these must be pre-provisioned in the customer's backend, the same way a bring-your-own-account password is. A phone or static-OTP persona keeps whatever `--username` you give it (a real customer address, or none at all) — it is never forced onto `@qa.minitap.ai` and never has one invented for it, since it already has its own way to sign in.
 
 Fill the `about` field with what makes each profile distinct (e.g. "Pro subscription active, has saved items, payment method on file"). This context is injected into the tester agent's prompt at run time.
 
@@ -1102,7 +1102,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Create phone-OTP profile | `minitest --json --app ID test-profile create --name "..." --phone-number "+1..." --static-otp-code-stdin` |
 | Set default profile | `minitest --json --app ID test-profile set-default <profile_id>` |
 | Clear default profile | `minitest --json --app ID test-profile clear-default` |
-| Update test profile | `minitest --json --app ID test-profile update <id> [--name ...] [--clear-password] [--phone-number ...] [--clear-static-otp-code]` |
+| Update test profile | `minitest --json --app ID test-profile update <id> [--name ...] [--clear-password] [--phone-number ...] [--clear-static-otp-code] [--clear-username] [--clear-phone-number] [--clear-about]` |
 | Delete test profile | `minitest --json --app ID test-profile delete <id> --force`                              |
 | List test files     | `minitest --json --app ID test-file list [--kind image\|document\|video\|audio\|other]`  |
 | Upload test file    | `minitest --json --app ID test-file upload ./local/file.pdf --note "..."`                |
@@ -1209,3 +1209,24 @@ printf "%s" "$OTP_CODE" | minitest --json --app $APP test-profile update <id> \
 To wipe an existing static OTP code, use `update --clear-static-otp-code`
 (mutually exclusive with `--static-otp-code`/`--static-otp-code-stdin` on the
 same invocation).
+
+### Clearing other test profile fields
+
+`update` can also wipe `username`, `phone_number`, and `about` individually,
+with the same mutual-exclusion rule as passwords: pass the new value OR the
+matching `--clear-*` flag, never both.
+
+```bash
+minitest --json --app $APP test-profile update <id> \
+  --clear-username --clear-phone-number --clear-about
+```
+
+- `--clear-username` (mutually exclusive with `--username`)
+- `--clear-phone-number` (mutually exclusive with `--phone-number`)
+- `--clear-about` (mutually exclusive with `--about`)
+
+A profile can end up with no username, no phone number, and no password at
+all — that's a valid state; the tester agent still runs it anonymously (skip
+login) unless a flow forces authentication, in which case it self-generates a
+throwaway `@qa.minitap.ai` identity at run time the same way it does for an
+unbound story.
