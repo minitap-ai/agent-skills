@@ -249,6 +249,7 @@ Only 3 is worth a blind retry. 6 comes from `df` alone and is explained in
 
 ```bash
 minitest --json apps list         # bare JSON array of {id, name, tenantId, …}
+minitest --json apps get <app_id> # full app record, including targets and source settings
 ```
 
 #### Dependency graph
@@ -1041,6 +1042,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Complete maintenance run | `minitest maintenance complete --changed`                                    |
 | Apply maintenance edits | `minitest maintenance apply` or `minitest maintenance apply --review`          |
 | List apps           | `minitest --json apps list`                                                              |
+| Get app details     | `minitest --json apps get <app_id>`                                                      |
 | App dependency graph| `minitest apps dependencies <app_id>` (Mermaid flowchart to stdout)               |
 | Simulate dependency change | `minitest --json --app ID apps dependencies <id> --simulate --add <story>:<parent>` |
 | Create native app   | `minitest --json apps create --name "My App" --platform ios --platform android [--tenant ID] [--description ...] [--slug ...] [--icon ./icon.png]` |
