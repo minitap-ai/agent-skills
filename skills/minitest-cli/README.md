@@ -17,7 +17,7 @@ This skill teaches AI agents how to use the `minitest` command-line tool. Where 
 
 ## What It Does
 
-1. **Guides CLI installation and authentication** (`curl -fsSL .../install.sh | bash`, `minitest auth login`)
+1. **Guides CLI installation and authentication** (`uv tool install minitest-cli`, `minitest auth login`)
 2. **Manages testing flows** — create, list, update, and delete flows with acceptance criteria
 3. **Handles native build uploads** — upload `.apk` / `.ipa` artifacts for Android/iOS apps
 4. **Runs tests on mobile and web targets** — start runs, watch progress, collect results
@@ -26,7 +26,8 @@ This skill teaches AI agents how to use the `minitest` command-line tool. Where 
 ## Requirements
 
 - Python 3.10+
-- `minitest-cli` installed (`curl -fsSL https://raw.githubusercontent.com/minitap-ai/minitest-cli/main/install.sh | bash`)
+- `minitest-cli` installed (`uv tool install minitest-cli`; needs `uv` —
+  https://docs.astral.sh/uv/getting-started/installation/ if missing)
 - A Minitap account and registered app
 
 ## Installation
