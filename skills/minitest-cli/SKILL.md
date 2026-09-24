@@ -8,7 +8,7 @@ description: >
   affects UI, navigation, or user journeys to check if existing tests need
   to be updated.
 ---
-<!-- skill-references-hash: 8df0916c0ee365806bd7bdabd4650d7dcadf7a4273e361523f631ac5bc345dbf -->
+<!-- skill-references-hash: 3b7ec9bb7bfe28e48bde6ae70b4913f316b00220774c50fc596b8430bfbb3848 -->
 
 # Minitest CLI
 
