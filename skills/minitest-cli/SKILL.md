@@ -117,9 +117,12 @@ commands already documented in this SKILL.md** — `test-profile create`,
 `app-knowledge update`, and so on. There is no special apply command: the
 reviewed suite is replayed as regular CLI calls in dependency order.
 
-If a scenario needs a file available in the test environment, `minitest
-test-file upload` it and bind it with `minitest user-story-binding set-files`
-while applying the suite.
+If a scenario needs a file available in the test environment (a photo to
+upload, a PDF to attach), first run `minitest --json test-file list`: the
+customer may already have added it, and its `note` says what it is for. Bind
+the file that matches with `minitest user-story-binding set-files`, and only
+`minitest test-file upload` a file nobody has provided yet. Bound files are
+the only ones the run places on the device; an unbound test file is never used.
 
 ## Maintaining existing tests (`minitest maintenance`)
 
