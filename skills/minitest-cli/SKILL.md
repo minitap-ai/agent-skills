@@ -497,6 +497,27 @@ minitest --json --app <app_id> user-story update <story_id> --depends-on ""
 > one parent. The two flags are mutually exclusive on the same invocation —
 > `--remove-dependency` is ignored when `--depends-on` is also provided.
 
+#### Customer-allowed setup commits
+
+Validation never activates a story's commit step (the save, submit, book or pay
+at its end), so a story whose starting state only exists after another story
+commits — a booking to manage, an order to track — cannot be validated on its
+own. When the customer has **explicitly** allowed a story's commit (for example
+zero-value test bookings that auto-cancel), record it, quoting their words:
+
+```bash
+minitest --json --app <app_id> user-story allow-setup-commit <setup_story_id> \
+  --customer-quote "Yes, you can make flexible Pay At Hotel bookings with the test card"
+
+# Undo it: validation goes back to stopping before the commit step
+minitest --json --app <app_id> user-story revoke-setup-commit <setup_story_id>
+```
+
+Validation of that story may then complete its commit, and every story that
+`--depends-on` it runs it first on the same device and starts from what it
+produced. `user-story get` shows the recorded permission as
+`setupCommitPermission`. Never record one the customer did not state.
+
 #### Device count
 
 A story's **device count** is how many virtual devices a single run provisions.
@@ -1072,6 +1093,8 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Revert criterion to a version | `minitest --json --app ID user-story update <id> --revert-criterion <crit_id>=<version_id>` |
 | Set story dependencies | `minitest --json --app ID user-story update <id> --depends-on <parent_id> [--depends-on <parent_id2>]` |
 | Remove a dependency | `minitest --json --app ID user-story update <id> --remove-dependency <parent_id>`        |
+| Allow a setup commit | `minitest --json --app ID user-story allow-setup-commit <id> --customer-quote "..."` |
+| Revoke a setup commit | `minitest --json --app ID user-story revoke-setup-commit <id>`                        |
 | Set story device count | `minitest --json --app ID user-story update <id> --device-count 2` (or `auto` to reset) |
 | Set story camera media | `minitest --json --app ID user-story update <id> --camera-media <path-or-file-id>` (video ≤ 50 MB / image ≤ 25 MB) |
 | Clear story camera media | `minitest --json --app ID user-story update <id> --clear-camera-media` (back to default feed) |
