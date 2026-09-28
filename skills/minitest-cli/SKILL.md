@@ -419,6 +419,15 @@ printf "%s" "$OTP_CODE" | minitest --json --app $APP test-profile create \
 
 Ask the user for the whitelisted phone number and its fixed OTP code — these must be pre-provisioned in the customer's backend, the same way a bring-your-own-account password is. A phone or static-OTP persona keeps whatever `--username` you give it (a real customer address, or none at all) — it is never forced onto `@qa.minitap.ai` and never has one invented for it, since it already has its own way to sign in.
 
+**Personas that pay.** When a scenario goes through checkout, give the persona that runs it a sandbox payment card with the `--test-card-*` options. Every field is optional; set the ones the app's payment form asks for. Ask the user which test card their staging payment provider accepts (Stripe test mode takes `4242 4242 4242 4242` with any future expiry and CVC); never invent one. The card is stored encrypted like a password and hidden from `test-profile list` (check `hasTestCard`).
+
+```bash
+minitest --json --app $APP test-profile update <id> \
+  --test-card-number "4242 4242 4242 4242" --test-card-expiry "12/34" --test-card-cvc "123"
+```
+
+On `update`, the options you pass change those fields and keep the rest of the stored card; `--clear-test-card` removes it (not combinable with `--test-card-*`).
+
 Fill the `about` field with what makes each profile distinct (e.g. "Pro subscription active, has saved items, payment method on file"). This context is injected into the tester agent's prompt at run time.
 
 If the app uses a third-party auth provider (e.g. Google OAuth), a shared Minitap account covers that flow — bind it to the relevant story instead of creating a new profile. Those shared pool addresses are also `@qa.minitap.ai`, so their inboxes are readable the same way.
@@ -1110,9 +1119,10 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | List shared profiles| `minitest --json test-profile list-shared` (Minitap-provided pool; currently Google account only) |
 | Create test profile | `minitest --json --app ID test-profile create --name "..." --username "..." --password-stdin` |
 | Create phone-OTP profile | `minitest --json --app ID test-profile create --name "..." --phone-number "+1..." --static-otp-code-stdin` |
+| Set a persona's test card | `minitest --json --app ID test-profile update <id> [--test-card-number ...] [--test-card-expiry MM/YY] [--test-card-cvc ...] [--test-card-holder-name ...] [--test-card-postal-code ...]` |
 | Set default profile | `minitest --json --app ID test-profile set-default <profile_id>` |
 | Clear default profile | `minitest --json --app ID test-profile clear-default` |
-| Update test profile | `minitest --json --app ID test-profile update <id> [--name ...] [--clear-password] [--phone-number ...] [--clear-static-otp-code] [--clear-username] [--clear-phone-number] [--clear-about]` |
+| Update test profile | `minitest --json --app ID test-profile update <id> [--name ...] [--clear-password] [--phone-number ...] [--clear-static-otp-code] [--clear-username] [--clear-phone-number] [--clear-about] [--clear-test-card]` |
 | Delete test profile | `minitest --json --app ID test-profile delete <id> --force`                              |
 | List test files     | `minitest --json --app ID test-file list [--kind image\|document\|video\|audio\|other]`  |
 | Upload test file    | `minitest --json --app ID test-file upload ./local/file.pdf --note "..."`                |
