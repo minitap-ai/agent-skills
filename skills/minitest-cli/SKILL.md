@@ -248,8 +248,9 @@ Treat `MINITEST_API_KEY` as a credential. Never commit it; rotate on suspected l
 Credentials rejected on a normal command exit 1, not 2 — only the `auth`
 commands themselves use 2.
 
-Only 3 is worth a blind retry. 6 comes from `df` alone and is explained in
-[`commands/draft-features.md`](commands/draft-features.md).
+Only 3 is worth a blind retry. 6 comes from `df` (explained in
+[`commands/draft-features.md`](commands/draft-features.md)) and from
+`app-skill delete` on a skill still linked to scenarios.
 
 ## Core Workflow
 
@@ -671,6 +672,12 @@ minitest --json app-knowledge update --app <app_id> --content-file ./app-knowled
 `app-knowledge update` calls `PUT /api/v1/apps/{app_id}/app-knowledge` and
 prints the new `versionNumber` to stdout (full record with `--json`). Each
 update creates a new prompt version — there is no rollback shortcut.
+
+App knowledge is for the product only. Procedures that arrange test state
+outside the UI under test (a customer test backend, an admin console, a debug
+menu, a sandbox payment) belong in **app skills** (`minitest app-skill`): when
+to write one, how to split them, secrets and maintenance proposals are in
+[`commands/app-skills.md`](commands/app-skills.md).
 
 ### 3b. See what exploration actually mapped (`minitest screens`)
 
@@ -1108,6 +1115,11 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Inspect one screen  | `minitest --json --app ID screens get "Onboarding age"`                                  |
 | Read app knowledge  | `minitest --json app-knowledge get --app ID`                                             |
 | Update app knowledge| `minitest --json app-knowledge update --app ID --content-file ./knowledge.md`            |
+| List / read app skills | `minitest --json --app ID app-skill list` / `app-skill get <name>` — see [`commands/app-skills.md`](commands/app-skills.md) |
+| Create an app skill | `minitest --json --app ID app-skill create <name> --description "Use when …" --instructions-file ./skill.md` |
+| Propose a skill fix | `minitest --json --app ID app-skill propose <name> --reason "…" --instructions-file ./skill.md` |
+| Set a skill secret  | `printf '%s' "$V" \| minitest --app ID app-skill secret set <name> <SECRET_NAME>` (value from stdin, never shown again) |
+| Link skills to story | `minitest --json --app ID user-story-binding set-skills <story_id> --skill <name>`      |
 | List env vars       | `minitest --json --app ID env list` (values masked; `--show` reveals)                    |
 | Reveal one env var  | `minitest --app ID env get <KEY>` (prints the value verbatim to stdout)           |
 | Set an env var      | `minitest --json --app ID env set <KEY> <VALUE> --yes [--dry-run]`                       |
@@ -1176,6 +1188,8 @@ Bindings link profiles or files to a specific user story:
 - Profile binding: at most one profile per story. `set-profile --clear` unbinds.
 - File binding: many files per story. `set-files` is **atomic replace** — pass
   every file id you want bound; omitted ids are unbound. `--clear` unbinds all.
+- Skill binding: `set-skills` is atomic replace by skill name; Mini loads the
+  linked skills before it starts. See [`commands/app-skills.md`](commands/app-skills.md).
 
 ## Draft features (`minitest df`)
 
