@@ -205,7 +205,7 @@ Never invent any other card, and never put one in `about`. A card lets the agent
 - ✅ `minitest-booker@qa.minitap.ai`, about: "Makes and manages bookings. Confirmation numbers and lookup codes arrive in this inbox; use the newest."
 - ❌ Asking the customer for an active booking, its confirmation email, or "an email that has never signed up".
 
-Any email field an app asks for takes a `@qa.minitap.ai` address, and a contact phone field nothing is sent to takes a number reserved for fiction (UK `+44 7700 900123`) — only a number that must receive a code is the customer's to provide. A flow that needs an address nobody has used before runs as "New user", which gets a fresh one every run; a fixed address is spent by its first run. "New user" cannot hold a test card, so when that flow also pays, create a persona that holds the card and whose `about` says: "Sign up with a fresh `<prefix>-<random>@qa.minitap.ai` every run; never reuse this address."
+Any email field an app asks for takes a `@qa.minitap.ai` address, and a contact phone field nothing is sent to takes a number reserved for fiction (UK `+44 7700 900123`) — only a number that must receive a code is the customer's to provide. When a phone field already shows or has selected a country code (a flag, a `+44` prefix, a country picker), type only the national number and check what the field now shows. A value the form rejects is a field-entry problem: clear it fully and enter it another way (the national digits, the country picked from its picker, the number typed key by key). A value you typed yourself, or data on an account this run created, is never the customer's account to fix. A flow that needs an address nobody has used before runs as "New user", which gets a fresh one every run; a fixed address is spent by its first run. "New user" cannot hold a test card, so when that flow also pays, create a persona that holds the card and whose `about` says: "Sign up with a fresh `<prefix>-<random>@qa.minitap.ai` every run; never reuse this address."
 
 **Personas vs. devices.** A persona is an *identity*; a device is a *surface*, and the two are decoupled — a scenario's device count is set independently of how many personas it binds (see "Device count" below). Bind the personas the journey needs, then decide the device count from *how* those identities are used:
 
@@ -451,7 +451,7 @@ Then check the structure mechanically:
 - Every distinct capability and account-differentiator you found is covered by at least one story.
 - Every non-gate edge names the state its parent produces and the child reads; a record only a commit makes comes from a producer on the same persona.
 - Every story that binds several personas but switches between them sequentially has an explicit device count of 1.
-- Every acceptance criterion is checkable on-screen — no backend, database, or network assertions.
+- Every acceptance criterion is checkable on-screen — no database, server-log or analytics assertions. On web, a criterion may compare the page against the API response the page itself received; elsewhere, no network assertions.
 
 Fix issues in place; don't redesign a working suite around one bad edge.
 
