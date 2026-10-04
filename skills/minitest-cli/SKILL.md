@@ -859,6 +859,15 @@ Under the hood, `run start` and `run all` create a **batch**. A single run is
 just a batch with one user story. With `--json --no-watch`, `run start` emits
 only `{"runId": …, "status": …}`.
 
+`run cancel` reads the requested run and cancels each active target through
+`POST /api/v1/apps/{app_id}/story-run-platforms/{srp_id}/cancel`. Completed,
+failed, skipped, escalated and evaluating targets are preserved, as are targets
+already carrying a cancellation request. It does not cancel sibling stories or
+fall back to cancelling the batch. Missing active target IDs fail before any
+write; a completion race is accepted only after a fresh read confirms that exact
+target no longer needs cancellation. The returned run is refreshed, and a run
+with no active targets is an unchanged no-op.
+
 `--web` requires a web execution target configured on the app in the Minitest
 web app; without one the run is refused even though the app was created with
 `--platform web --web-url …`.
