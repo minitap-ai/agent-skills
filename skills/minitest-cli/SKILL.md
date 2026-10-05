@@ -946,6 +946,62 @@ as fixed:
 minitest --json --app <app_id> run feedback <result_id> "Not a bug: expected behavior for this account"
 ```
 
+### 8b. Watch what the run actually did (recording + frames)
+
+A `failReason` is the tester's account of what happened. Before classifying a
+failure, or calling it "not a bug", check it against the recording. The text can
+be wrong in ways that only the frames show: the drag did start but the drop
+didn't commit, a toast appeared and the tester missed it, the tap landed on the
+wrong element.
+
+`run recording` downloads the run's reduced recording, where static stretches
+are sped up (the same file the webapp plays). It writes a timeline next to it
+that places every criterion verdict and every agent action **in seconds of that
+file**:
+
+```bash
+minitest --json --app <app_id> run recording <story_run_id> [--platform ios|android|web] [--srp <srp_id>] [--device N] [--out DIR] [--criterion-frames 4] [--width 240]
+```
+
+It writes to `--out` (default `./minitest-recordings/<run_id>-<platform>/`):
+
+- `recording.mp4`: the reduced recording.
+- `timeline.json`: the same JSON as stdout.
+  - `criteria[]` lists each result with `status`, `criticality`, `failReason`,
+    `resultSummary`, and `observedFromSec`/`observedUntilSec`, the window in
+    which the tester judged it.
+  - `actions[]` lists every gesture/click/nav with `atSec`, `endSec`, `type`,
+    `target` (the element label), and `intent` (what the tester said it was
+    trying to do).
+  - `timeBase` is `compressed`, or `raw` when the file was never sped up.
+- `criteria/NN-<status>.png`: one strip per criterion, with `--criterion-frames`
+  frames spread across its observation window (±1s), left to right. Needs
+  `ffmpeg` on PATH. Without it you still get the video and timeline, plus a
+  warning. `--criterion-frames 0` skips the strips.
+
+A run with several targets needs `--platform` (or `--srp` for two targets on the
+same platform, e.g. two web viewports). `--device N` selects one device's video
+on a multi-device run, and only that device's criteria are kept.
+
+To look closer at any moment, sample frames from the downloaded file. Use the
+action times from the timeline to pick the window. `run frames` always prints
+JSON: one entry per strip image, with the timestamps it contains.
+
+```bash
+minitest run frames <video.mp4> [--start S] [--end E] [--every 2] [--at T ...] [--columns 10] [--width 200] [--out DIR]
+```
+
+Suggested loop for a failed criterion:
+
+1. Run `run recording`, then open `criteria/NN-failed.png`.
+2. Find the `actions[]` just before `observedFromSec` (the steps that led to the
+   verdict).
+3. Run `run frames --start <action.atSec - 2> --end <observedUntilSec> --every 0.5`
+   to step through those actions frame by frame.
+
+Then decide whether the verdict is a real app bug, a tester mistake, or a stale
+criterion.
+
 ### 9. Read open issues and fix prompts
 
 `issues list` returns the findings to fix as JSON, including each issue's
@@ -1142,6 +1198,8 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | List issues and fix prompts | `minitest --app ID issues list [--issue ID \| --run ID \| --batch ID] [--platform P] [--criticality C] [--include-resolved]` |
 | Mark app issues fixed | `minitest --app ID issues fix <failure_id> [<failure_id> ...]`                          |
 | Submit result feedback | `minitest --json --app ID run feedback <result_id> "text"`                         |
+| Recording + timed verdicts/actions | `minitest --json --app ID run recording <run_id> [--platform P] [--srp ID] [--device N] [--out DIR] [--criterion-frames N]` |
+| Frame strips from a video | `minitest run frames <video> [--start S] [--end E] [--every SEC] [--at T ...] [--columns N] [--width PX]` |
 | Cancel batch        | `minitest --json --app ID batch cancel <batch_id>`                                       |
 | Auth                | `minitest auth login`, `minitest --json auth status`, `minitest auth logout`      |
 | Refresh this skill  | `minitest skill` (prints the latest skill markdown)                               |
