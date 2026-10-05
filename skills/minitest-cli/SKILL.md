@@ -851,9 +851,15 @@ minitest --json --app <app_id> run from-commit <full_sha> \
   [--platform ios|android|web] [--platform ...] \
   [--user-story <id-or-name>] [--no-watch] [--timeout <seconds>]
 
-# Cancel a running or pending run
-minitest --json --app <app_id> run cancel <run_id>
+# Cancel every pending or running platform of a run (optionally just one)
+minitest --json --app <app_id> run cancel <run_id> [--platform ios|android|web] [--srp <srp_id>]
 ```
+
+`run cancel` cancels each platform of the run that has not finished yet and
+prints the updated run. Platforms that already finished are left alone. It exits
+0 when at least one platform was cancelled, 1 when there was nothing left to
+cancel, and 4 when the run (or the `--platform` / `--srp` you asked for) does not
+exist.
 
 Under the hood, `run start` and `run all` create a **batch**. A single run is
 just a batch with one user story. With `--json --no-watch`, `run start` emits
@@ -1189,7 +1195,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Run all native stories | `minitest --json --app ID run all --ios-build X --android-build Y`                    |
 | Run all web stories | `minitest --json --app ID run all --web`                                                 |
 | Build and run commit | `minitest --json --app ID run from-commit SHA [--platform P] [--user-story ID] [--no-watch] [--timeout N]` |
-| Cancel a run        | `minitest --json --app ID run cancel <run_id>`                                           |
+| Cancel a run        | `minitest --json --app ID run cancel <run_id> [--platform P] [--srp ID]`                |
 | Check run           | `minitest --json --app ID run status <run_id>`                                           |
 | List runs for story | `minitest --json --app ID run list "Story Name"`                                         |
 | List batches        | `minitest --json --app ID batch list`                                                    |
