@@ -39,16 +39,14 @@ stdout and keeps every diagnostic on stderr, so `| jq` is always safe.
 
 `--app` may be replaced by `export MINITEST_APP_ID=<uuid>`; the flag wins when
 both are set. Commands that are tenant-scoped rather than app-scoped (`apps`,
-`auth`, `flow-types`) do not require it, though `flow-types` needs it as a tenant
-hint when your account spans several tenants.
+`auth`) do not require it.
 
-### Three exceptions to the shape
+### Two exceptions to the shape
 
 | Command group | Deviation |
 | --- | --- |
 | `app-knowledge` | Declares its **own** `--app`, so it goes **after** the subcommand: `minitest --json app-knowledge get --app <id>`. The global pre-subcommand `--app` exits 2. |
 | `auth api-key` | Declares its **own** `--json`, so it goes **after** the subcommand: `minitest auth api-key list --tenant <id> --json`. The global `--json` is silently ignored and a table is printed. |
-| `flow-types` | `--app` must stay in the global position; `flow-types list --app <id>` exits 2. |
 
 ### Commands that do not emit JSON
 
@@ -322,7 +320,7 @@ is required: the command exits 1 with a clear error otherwise.
 
 ### 2. Create user stories
 
-A **user story** describes a user journey to test. It has a name, a type, an
+A **user story** describes a user journey to test. It has a name, a few tags, an
 optional description, and a list of **acceptance criteria** — plain-text
 assertions the AI agent will verify visually on the target screen (mobile device
 or browser).
@@ -332,7 +330,7 @@ or browser).
 ```bash
 minitest --json --app <app_id> user-story create \
   --name "User Login" \
-  --type login \
+  --tag auth \
   --profile <profile_id> \
   --description "Email/password login from welcome screen" \
   --criteria "The login screen shows email and password fields" \
@@ -346,13 +344,12 @@ completes successfully (repeatable for multiple parents):
 ```bash
 minitest --json --app <app_id> user-story create \
   --name "View Order History" \
-  --type navigation \
+  --tag orders \
   --depends-on <login_story_id> \
   --criteria "The order history screen is displayed"
 ```
 
-**User story types:** `login`, `registration`, `checkout`, `onboarding`,
-`search`, `settings`, `navigation`, `form`, `profile`, `other`, `custom`.
+Tag scenarios as described in [Tags](#3-tags-and-app-knowledge).
 
 > **Ask first:** Do not create `checkout`, billing, or payment user stories
 > until you know how this app expects payment to be exercised. The hard limit is
@@ -371,14 +368,12 @@ minitest --json --app <app_id> user-story create \
 > build uses: the Test Store mocks billing entirely and needs no store setup,
 > while a platform sandbox drives the real App Store or Play purchase flow.
 >
-> Record the answer where the tester will read it at run time: the flow type's
-> `--usage-prompt`
-> (e.g. `"Paid plans are sandboxed: use card 4242 4242 4242 4242."`), the app
-> knowledge, or the persona's `--about`.
+> Record the answer where the tester will read it at run time: the app
+> knowledge (e.g. `"Paid plans are sandboxed: use card 4242 4242 4242 4242."`) or the persona's `--about`.
 >
 > Once you have that answer, author these stories like any other. Do not refuse a
 > whole feature over the payment step it ends on, and never invent a restriction
-> of your own or bake one into a flow type.
+> of your own or bake one into a tag.
 
 **Test account requirement:** Before creating user stories that require login
 or account-specific state, ensure the user provides test credentials via the
@@ -529,7 +524,7 @@ value is capped server-side at `min(3, tenant device quota)`.
 ```bash
 # Create a story that always runs on 2 devices
 minitest --json --app <app_id> user-story create \
-  --name "Two-player match" --type other --device-count 2 \
+  --name "Two-player match" --tag multiplayer --device-count 2 \
   --criteria "Both players see the shared game state"
 
 # Override an existing story to 3 devices
@@ -560,7 +555,7 @@ file path** to upload or an **existing test-file ID** to reuse:
 ```bash
 # Upload a local image/video and attach it to a new story
 minitest --app <app_id> user-story create \
-  --name "Scan QR to check in" --type navigation \
+  --name "Scan QR to check in" --tag check-in \
   --camera-media ./fixtures/checkin-qr.png
 
 # Reuse an already-uploaded test file by its ID
@@ -576,80 +571,51 @@ minitest --app <app_id> user-story update <story_id> --clear-camera-media
 > file must be an image or video within the size caps — **video ≤ 50 MB, image
 > ≤ 25 MB**. `--camera-media` and `--clear-camera-media` are mutually exclusive.
 
-### 3. Reading and managing flow types, and app knowledge
+### 3. Tags, and app knowledge
 
-> Needs **minitest-cli ≥ 0.22.0**. On an older CLI the `create` / `update` /
-> `delete` subcommands below do not exist, and `--json flow-types list` still
-> returns a flat array of names. Check with `minitest --version` and run
-> `minitest upgrade` before assuming a command is broken.
+> Needs a minitest-cli release with `minitest tags`. Check with `minitest --version`
+> and run `minitest upgrade` before assuming a command is broken.
 
-When generating user stories programmatically (e.g. from an exploration
-subagent), validate every `--type` value against the live list of flow types
-before calling `user-story create` — invalid values exit non-zero.
+Tags group scenarios so you can filter them and run a whole group at once. They
+are shared across the tenant, and a scenario can carry several.
+
+- **Reuse first.** Run `minitest --json --app <app_id> tags list` before tagging
+  and pick existing names when they fit.
+- **1–3 generic tags per scenario**, naming the feature area or journey family
+  (`auth`, `checkout`, `onboarding`, `smoke`) — never the scenario title.
+- **You may create** a tag when nothing fits: an unknown `--tag` name is created
+  on the fly, or create it explicitly to pick its colour.
 
 ```bash
-# Bare JSON array, with each custom type's id and presentation fields
-minitest --json flow-types list
-# [{"name": "login",    "custom": false, "id": null,    "icon": null,          …},
-#  {"name": "Billing",  "custom": true,  "id": "3fa85…", "icon": "credit-card", …}]
+# Each tag with its colour and how many scenarios carry it
+minitest --json --app <app_id> tags list
 
-# Just the names, for a membership check
-minitest --json flow-types list | jq -r '.[].name'
+# Optional: create a tag up front (colour defaults to gray)
+minitest --json --app <app_id> tags create --name "checkout" --color amber
+
+# Rename, recolour or describe a tag, addressing it by name or id
+minitest --json --app <app_id> tags update "checkout" --name "payments"
+
+# Delete removes the tag from every scenario; it refuses to run without --yes
+minitest --json --app <app_id> tags delete "payments" --yes
 ```
 
-The list is the built-in types plus your tenant's custom ones. Flow types are
-**tenant-scoped**, so `--app` is only a tenant hint. It is nonetheless
-**required whenever your account spans more than one tenant** — otherwise the
-command exits non-zero asking which tenant to act on. Keep it in the global
-position (`minitest --json --app <id> flow-types list`); a trailing `--app`
-exits 2.
-
-When no built-in type fits a journey, create your own instead of forcing it into
-`other`:
+`--tag` is repeatable on user-story commands (matching is case-insensitive). On
+`update`, any `--tag` replaces the scenario's whole tag set; `--clear-tags`
+removes them all. `list --tag` returns scenarios carrying any of the given tags.
 
 ```bash
-minitest --json flow-types create --name "Subscription" \
-  --usage-prompt "Paid plans are sandboxed: use card 4242 4242 4242 4242."
-
-# Optional presentation flags, defaults are tag/gray
-minitest --json flow-types create --name "Subscription" --icon credit-card --color green
-```
-
-`--usage-prompt` is extra context handed to the testing agent whenever it runs a
-story of that type — use it for domain rules that apply to the whole family of
-flows. Creating a name that already exists (or that collides with a built-in)
-fails with the server's conflict message.
-
-Rename or restyle an existing custom type with `update`, addressing it by name
-or by id. The type keeps its identity, so stories already on it stay on it:
-
-```bash
-minitest --json flow-types update "Subscription" --name "Billing"
-minitest --json flow-types update "Billing" --usage-prompt "Card 4242… declines above 500."
-```
-
-`delete` removes a custom type and **resets every user story on it to `other`**,
-so it refuses to run without `--yes`:
-
-```bash
-minitest --json flow-types delete "Billing" --yes
-```
-
-Pass the type name to any user-story command; the CLI resolves it for you
-(matching is case-insensitive):
-
-```bash
-minitest --json --app <app_id> user-story create --name "Upgrade to Pro" --type "Billing" \
+minitest --json --app <app_id> user-story create --name "Upgrade to Pro" \
+  --tag checkout --tag subscription \
   --criteria "The plan badge reads Pro after checkout"
 
-minitest --json --app <app_id> user-story list --type "Billing"
+minitest --json --app <app_id> user-story update <id> --tag checkout
+minitest --json --app <app_id> user-story update <id> --clear-tags
+minitest --json --app <app_id> user-story list --tag checkout --tag auth
 ```
 
-`flow-types list` wraps `GET /api/v1/user-story-types` (built-ins) plus
-`GET /api/v1/apps/<app_id>/custom-user-story-types`; `create`, `update` and
-`delete` wrap `POST` / `PATCH` / `DELETE` on the latter. The app in that path is
-only addressing: the CLI picks one of your apps automatically when you do not
-pass `--app` and your account has a single tenant.
+Run every scenario carrying a tag in one batch with `run start --tag` (see
+[Run tests](#5-run-tests)).
 
 For app-level prompt context (the markdown blob that conditions the AI agent
 during runs), use `app-knowledge`:
@@ -683,7 +649,7 @@ to write one, how to split them, secrets and maintenance proposals are in
 
 Before you invent scenarios for an app, read the screen map: it is the list of
 screens the exploration crawl genuinely stood on, so it tells you what the app
-really contains instead of what its name or flow types imply.
+really contains instead of what its name or tags imply.
 
 ```bash
 # Every mapped screen, shallowest first
@@ -864,6 +830,11 @@ minitest --json --app <app_id> run start "User Login" \
   --ios-build <ios_build_id> \
   --android-build <android_build_id> \
   --no-watch
+
+# Run every scenario carrying any of these tags (one batch, fire-and-forget)
+minitest --json --app <app_id> run start --tag checkout --tag auth \
+  --ios-build <ios_build_id> \
+  --android-build <android_build_id>
 
 # Run ALL user stories at once (creates one batch, fire-and-forget)
 minitest --json --app <app_id> run all \
@@ -1157,7 +1128,7 @@ minitest --json --app $APP batch list | jq '.items[] | {id, status}'
 
 Two shapes to expect: **list endpoints are paginated envelopes**
 (`{items, page, pageSize, total}`) — `user-story`, `build`, `run`, `batch`,
-`test-profile`, `test-file` — while `apps list` and `flow-types list` return
+`test-profile`, `test-file` — while `apps list` and `tags list` return
 **bare arrays**. Reach for `.items[]` first and fall back to `.[]`.
 
 `batch list` returns `storyRuns: []` for every batch; only `batch get` populates
@@ -1182,8 +1153,8 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Simulate dependency change | `minitest --json --app ID apps dependencies <id> --simulate --add <story>:<parent>` |
 | Create native app   | `minitest --json apps create --name "My App" --platform ios --platform android [--tenant ID] [--description ...] [--slug ...] [--icon ./icon.png]` |
 | Create web app      | `minitest --json apps create --name "My Web App" --platform web --web-url https://example.com [--tenant ID]` |
-| Create user story   | `minitest --json --app ID user-story create --name "..." --type login --criteria "..."` |
-| Create user story with profile | `minitest --json --app ID user-story create --name "..." --type login --profile <profile_id> --criteria "..."` |
+| Create user story   | `minitest --json --app ID user-story create --name "..." --tag auth --criteria "..."` |
+| Create user story with profile | `minitest --json --app ID user-story create --name "..." --tag auth --profile <profile_id> --criteria "..."` |
 | List user stories   | `minitest --json --app ID user-story list`                                               |
 | Update user story   | `minitest --json --app ID user-story update <id> --add-criteria "..."`                   |
 | Reword one criterion (keep history) | `minitest --json --app ID user-story update <id> --set-criterion <crit_id>="text"` |
@@ -1195,10 +1166,12 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Set story device count | `minitest --json --app ID user-story update <id> --device-count 2` (or `auto` to reset) |
 | Set story camera media | `minitest --json --app ID user-story update <id> --camera-media <path-or-file-id>` (video ≤ 50 MB / image ≤ 25 MB) |
 | Clear story camera media | `minitest --json --app ID user-story update <id> --clear-camera-media` (back to default feed) |
-| List flow types     | `minitest --json flow-types list` (built-ins + your tenant's custom types)                |
-| Create custom flow type | `minitest --json flow-types create --name "Subscription" [--usage-prompt "..."] [--icon tag] [--color gray]` |
-| Rename custom flow type | `minitest --json flow-types update "Subscription" --name "Billing"`                  |
-| Delete custom flow type | `minitest --json flow-types delete "Billing" --yes` (its stories fall back to `other`) |
+| List tags           | `minitest --json --app ID tags list`                                                     |
+| Create tag          | `minitest --json --app ID tags create --name "checkout" [--color amber] [--description "..."]` |
+| Rename tag          | `minitest --json --app ID tags update "checkout" --name "payments"`                      |
+| Delete tag          | `minitest --json --app ID tags delete "payments" --yes` (removed from every scenario)   |
+| Tag a story         | `minitest --json --app ID user-story update <id> --tag auth [--tag smoke]` (replaces the set) |
+| Filter stories by tag | `minitest --json --app ID user-story list --tag auth`                                  |
 | List mapped screens | `minitest --json --app ID screens list [--platform ios]`                                 |
 | See the crawl's shape | `minitest --app ID screens list --tree`                                                |
 | Screens the crawl was blocked on | `minitest --json --app ID screens list --blocked`                           |
@@ -1221,6 +1194,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Run one native story| `minitest --json --app ID run start "Story Name" --ios-build X --android-build Y [--ios-device-type phone\|tablet] [--android-device-type phone\|tablet]` |
 | Run tagged native stories | `minitest --json --app ID run start --tag smoke --ios-build X [--ios-device-type phone\|tablet]` |
 | Run one web story   | `minitest --json --app ID run start "Story Name" --web`                                 |
+| Run a tag           | `minitest --json --app ID run start --tag checkout --web` (not combinable with a story name) |
 | Run all native stories | `minitest --json --app ID run all --ios-build X --android-build Y [--ios-device-type phone\|tablet] [--android-device-type phone\|tablet]` |
 | Run all web stories | `minitest --json --app ID run all --web`                                                 |
 | Build and run commit | `minitest --json --app ID run from-commit SHA [--platform P] [--ios-device-type phone\|tablet] [--android-device-type phone\|tablet] [--user-story ID] [--no-watch] [--timeout N]` |
