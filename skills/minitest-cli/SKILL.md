@@ -2,7 +2,7 @@
 name: minitest-cli
 description: >
   Use the minitest CLI to manage user stories, upload native builds, execute
-  mobile and web app test runs, and analyse results. Use when the user asks to test
+  mobile (phone or tablet) and web app test runs, and analyse results. Use when the user asks to test
   their mobile or web app, create test scenarios, run tests, check test results, or
   manage native builds via the command line. Also use after any code change that
   affects UI, navigation, or user journeys to check if existing tests need
@@ -812,12 +812,31 @@ left untouched alongside `guidance`.
 
 ### 5. Run tests
 
-Execute a user story on either native lanes or the web lane. For native runs,
+Execute a user story on native cloud phone/tablet lanes or the web lane. For native runs,
 provide at least one of `--ios-build` or `--android-build`; single-platform apps
-may omit the other. For web runs, pass `--web` by itself — do **not** combine it
-with native build flags. Web runs use the app's configured web URL and default web
+may omit the other. For web-only runs, pass `--web` by itself; native and web
+lanes can also be combined. Web runs use the app's configured web URL and default web
 targets; there are no per-run `--web-url`, `--browser`, or `--viewport` overrides
 in the CLI.
+
+Native cloud lanes default to `phone`. On `run start` (including `--tag`),
+`run all`, and `run from-commit`, `--ios-device-type phone|tablet` and
+`--android-device-type phone|tablet` configure the corresponding selected lane;
+they **never select an OS on their own**. For `start`/`all`, include that OS's
+`--ios-build`/`--android-build`; for `from-commit`, use `--platform` or the
+existing iOS + Android default. An explicit device type (even `phone`) for a
+nonselected OS is an error. These options are native-cloud only, not for
+physical devices, web/mobile-web targets, or Edge.
+
+V1 supports **one form factor per OS per run**; run phones and tablets in separate
+batches rather than treating the option as a matrix. Tablet labels are
+`iOS · Tablet` / `Android · Tablet`; phone labels remain `iOS` / `Android`.
+Per-run choices do not change app defaults. An iPhone-only build may run on iPad
+in compatibility mode (`tablet_iphone_compatibility_mode` warning); unknown
+device-family metadata produces `tablet_compatibility_unknown`. Neither warning
+blocks launch, and neither run establishes native tablet-layout coverage.
+Surface the distinction and never claim native iPad support from a passing
+compatibility-mode or unknown-metadata run.
 
 ```bash
 # Run a single user story (by name or UUID) and wait for results
@@ -831,6 +850,14 @@ minitest --json --app <app_id> run start "User Login" \
 
 # Web app (no build upload needed)
 minitest --json --app <app_id> run start "User Login" --web
+
+# Native cloud tablet; iOS is selected by the build flag, not the device type
+minitest --json --app <app_id> run start "User Login" \
+  --ios-build <ios_build_id> --ios-device-type tablet
+
+# The same device-type options work when selecting stories by tag
+minitest --json --app <app_id> run start --tag smoke \
+  --android-build <android_build_id> --android-device-type tablet
 
 # Fire-and-forget (returns runId immediately — useful in CI)
 minitest --json --app <app_id> run start "User Login" \
@@ -849,6 +876,7 @@ minitest --json --app <app_id> run all --web
 # Build a required commit SHA and run its suite, polling by default
 minitest --json --app <app_id> run from-commit <full_sha> \
   [--platform ios|android|web] [--platform ...] \
+  [--ios-device-type phone|tablet] [--android-device-type phone|tablet] \
   [--user-story <id-or-name>] [--no-watch] [--timeout <seconds>]
 
 # Cancel every pending or running platform of a run (optionally just one)
@@ -1190,11 +1218,12 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Upload native build | `minitest --json --app ID build upload ./app.apk`                                        |
 | List builds         | `minitest --json --app ID build list [--platform P] [--status S] [--kind K]`            |
 | Build from GitHub commit | `minitest --json --app ID build from-commit [SHA] [--platform P] [--force-full]`   |
-| Run one native story| `minitest --json --app ID run start "Story Name" --ios-build X --android-build Y`        |
+| Run one native story| `minitest --json --app ID run start "Story Name" --ios-build X --android-build Y [--ios-device-type phone\|tablet] [--android-device-type phone\|tablet]` |
+| Run tagged native stories | `minitest --json --app ID run start --tag smoke --ios-build X [--ios-device-type phone\|tablet]` |
 | Run one web story   | `minitest --json --app ID run start "Story Name" --web`                                 |
-| Run all native stories | `minitest --json --app ID run all --ios-build X --android-build Y`                    |
+| Run all native stories | `minitest --json --app ID run all --ios-build X --android-build Y [--ios-device-type phone\|tablet] [--android-device-type phone\|tablet]` |
 | Run all web stories | `minitest --json --app ID run all --web`                                                 |
-| Build and run commit | `minitest --json --app ID run from-commit SHA [--platform P] [--user-story ID] [--no-watch] [--timeout N]` |
+| Build and run commit | `minitest --json --app ID run from-commit SHA [--platform P] [--ios-device-type phone\|tablet] [--android-device-type phone\|tablet] [--user-story ID] [--no-watch] [--timeout N]` |
 | Cancel a run        | `minitest --json --app ID run cancel <run_id> [--platform P] [--srp ID]`                |
 | Check run           | `minitest --json --app ID run status <run_id>`                                           |
 | List runs for story | `minitest --json --app ID run list "Story Name"`                                         |
