@@ -1,7 +1,7 @@
 ---
 name: minitest-cli
 description: >
-  Use the minitest CLI to manage user stories, upload native builds, execute
+  Use the minitest CLI to manage scenarios, upload native builds, execute
   mobile (phone or tablet) and web app test runs, and analyse results. Use when the user asks to test
   their mobile or web app, create test scenarios, run tests, check test results, or
   manage native builds via the command line. Also use after any code change that
@@ -16,7 +16,7 @@ description: >
 native apps it runs on virtual devices (simulators & emulators); for web apps it
 runs browser-based targets configured on the app. An AI agent analyses the app
 screen and verifies acceptance criteria you define. You manage everything through
-the CLI: user stories, native builds, web lanes, runs, batches, and results.
+the CLI: scenarios, native builds, web lanes, runs, batches, and results.
 
 ## Command shape
 
@@ -28,7 +28,7 @@ minitest [--json] [--app <APP_ID>] <subcommand> [args…] [subcommand flags…]
 ```
 
 ```bash
-minitest --json --app 713c6550-7d36-41aa-b1cd-3240b3a0dda1 user-story list
+minitest --json --app 713c6550-7d36-41aa-b1cd-3240b3a0dda1 scenario list
 minitest --json --app $APP run verdicts <batch_id> --actionable
 ```
 
@@ -111,21 +111,21 @@ Two companion references support that workflow:
 
 The workflow ends by **applying the suite through the ordinary `minitest` CLI
 commands already documented in this SKILL.md** — `test-profile create`,
-`user-story create` (with `--criteria`, `--profile`, `--depends-on`),
+`scenario create` (with `--criteria`, `--profile`, `--depends-on`),
 `app-knowledge update`, and so on. There is no special apply command: the
 reviewed suite is replayed as regular CLI calls in dependency order.
 
 If a scenario needs a file available in the test environment (a photo to
 upload, a PDF to attach), first run `minitest --json test-file list`: the
 customer may already have added it, and its `note` says what it is for. Bind
-the file that matches with `minitest user-story-binding set-files`, and only
+the file that matches with `minitest scenario-binding set-files`, and only
 `minitest test-file upload` a file nobody has provided yet. Bound files are
 the only ones the run places on the device; an unbound test file is never used.
 
 ## Maintaining existing tests (`minitest maintenance`)
 
 Use `minitest maintenance` when the app UI/code changed and the customer wants
-their Minitest user stories updated without sharing GitHub/code with Minitap.
+their Minitest scenarios updated without sharing GitHub/code with Minitap.
 Run it from the app repository. The customer's own coding agent reads local code;
 the CLI sends only proposed test-flow edits and an opaque local HEAD SHA.
 
@@ -261,7 +261,7 @@ minitest --json apps get <app_id> # full app record, including targets and sourc
 
 #### Dependency graph
 
-Visualise the user-story dependency DAG as a Mermaid flowchart — useful for
+Visualise the scenario dependency DAG as a Mermaid flowchart — useful for
 understanding the execution order before creating or modifying stories:
 
 ```bash
@@ -318,17 +318,25 @@ is required: the command exits 1 with a clear error otherwise.
 > to launch until then. Creating a web app end-to-end is not a CLI-only flow.
 > There is also no `apps delete`, so avoid creating throwaway apps.
 
-### 2. Create user stories
+### 2. Create scenarios
 
-A **user story** describes a user journey to test. It has a name, a few tags, an
+A **scenario** describes a user journey to test. It has a name, a few tags, an
 optional description, and a list of **acceptance criteria** — plain-text
 assertions the AI agent will verify visually on the target screen (mobile device
 or browser).
 
+> `minitest scenario` and `minitest scenario-binding` were formerly named
+> `user-story` and `user-story-binding`. The old names still work as hidden,
+> deprecated aliases (they print a warning on stderr; `--json` stdout is
+> unchanged), but always use `scenario`. If the CLI answers `No such command
+> 'scenario'`, it predates the rename: run `minitest upgrade`. Flags, JSON keys
+> and API fields keep their `story` names (`--user-story`, `userStoryId`,
+> `storyRuns`).
+
 `--profile <profile_id>` is optional. If omitted, Minitest auto-assigns the app's default profile when one is configured.
 
 ```bash
-minitest --json --app <app_id> user-story create \
+minitest --json --app <app_id> scenario create \
   --name "User Login" \
   --tag auth \
   --profile <profile_id> \
@@ -342,7 +350,7 @@ Use `--depends-on` to declare that this story must be run after another story
 completes successfully (repeatable for multiple parents):
 
 ```bash
-minitest --json --app <app_id> user-story create \
+minitest --json --app <app_id> scenario create \
   --name "View Order History" \
   --tag orders \
   --depends-on <login_story_id> \
@@ -351,7 +359,7 @@ minitest --json --app <app_id> user-story create \
 
 Tag scenarios as described in [Tags](#3-tags-and-app-knowledge).
 
-> **Ask first:** Do not create `checkout`, billing, or payment user stories
+> **Ask first:** Do not create `checkout`, billing, or payment scenarios
 > until you know how this app expects payment to be exercised. The hard limit is
 > narrow — the tester never enters a real card and never makes a real-money
 > purchase — but everything short of that is testable: sandbox and test cards,
@@ -375,14 +383,14 @@ Tag scenarios as described in [Tags](#3-tags-and-app-knowledge).
 > whole feature over the payment step it ends on, and never invent a restriction
 > of your own or bake one into a tag.
 
-**Test account requirement:** Before creating user stories that require login
+**Test account requirement:** Before creating scenarios that require login
 or account-specific state, ensure the user provides test credentials via the
-Minitest web app's test configuration. User stories should only cover journeys
+Minitest web app's test configuration. Scenarios should only cover journeys
 the test account can actually perform.
 
 ### Test Profiles
 
-When generating user stories, create a test profile for every distinct role or subscription tier the app requires. Each profile represents a unique starting state the agent needs to run a story (e.g. "Free User", "Pro User", "Admin", "Driver").
+When generating scenarios, create a test profile for every distinct role or subscription tier the app requires. Each profile represents a unique starting state the agent needs to run a story (e.g. "Free User", "Pro User", "Admin", "Driver").
 
 **Default to email-OTP personas.** Give each profile a `<prefix>@qa.minitap.ai` username and NO password. Every `@qa.minitap.ai` address delivers into a shared inbox the tester agent reads at run time, so it can sign in (or sign up) by pulling the login/verification code itself — no real credentials to manage:
 
@@ -429,9 +437,9 @@ Fill the `about` field with what makes each profile distinct (e.g. "Pro subscrip
 If the app uses a third-party auth provider (e.g. Google OAuth), a shared Minitap account covers that flow — bind it to the relevant story instead of creating a new profile. Those shared pool addresses are also `@qa.minitap.ai`, so their inboxes are readable the same way.
 
 Bind every story that requires authentication to its profile at creation time:
-- Use `user-story create --profile <profile_id>` when you need a specific profile.
+- Use `scenario create --profile <profile_id>` when you need a specific profile.
 - If you omit `--profile`, ensure the app default profile is already configured so story creation auto-binds it.
-- If needed, use `user-story-binding set-profile` immediately after creation.
+- If needed, use `scenario-binding set-profile` immediately after creation.
 
 **Acceptance criteria rules:**
 
@@ -440,20 +448,20 @@ Bind every story that requires authentication to its profile at creation time:
 - One assertion per criterion
 - Order them chronologically as they appear in the journey
 
-Other user story commands:
+Other scenario commands:
 
 ```bash
-minitest --json --app <app_id> user-story list
-minitest --json --app <app_id> user-story get <user_story_id>
-minitest --json --app <app_id> user-story update <user_story_id> --name "New Name"
-minitest --json --app <app_id> user-story update <user_story_id> --add-criteria "New check"
-minitest --json --app <app_id> user-story update <user_story_id> \
+minitest --json --app <app_id> scenario list
+minitest --json --app <app_id> scenario get <user_story_id>
+minitest --json --app <app_id> scenario update <user_story_id> --name "New Name"
+minitest --json --app <app_id> scenario update <user_story_id> --add-criteria "New check"
+minitest --json --app <app_id> scenario update <user_story_id> \
   --set-criterion <criterion-id-or-index>="New text"
-minitest --json --app <app_id> user-story update <user_story_id> \
+minitest --json --app <app_id> scenario update <user_story_id> \
   --revert-criterion <criterion-id-or-index>=<version_id>
-minitest --json --app <app_id> user-story update <user_story_id> \
+minitest --json --app <app_id> scenario update <user_story_id> \
   --criteria "First check" --criteria "Second check"   # full replace
-minitest --json --app <app_id> user-story delete <user_story_id> --force
+minitest --json --app <app_id> scenario delete <user_story_id> --force
 ```
 
 > **Acceptance criteria are versioned.** For rewording, always prefer repeatable
@@ -465,27 +473,27 @@ minitest --json --app <app_id> user-story delete <user_story_id> --force
 > reworded criteria; `--add-criteria` only appends.
 
 > **Use `criterionId`, not `id`.** Each entry of `acceptanceCriteria[]` in
-> `user-story get --json` carries both: `id` is the *version* id and `criterionId`
+> `scenario get --json` carries both: `id` is the *version* id and `criterionId`
 > is the stable identity. `--set-criterion` accepts `criterionId` or a 1-based
 > index; passing `id` fails with "No criterion matches id".
 > `--revert-criterion <criterionId>=<id-of-the-target-version>` takes one of each.
 
 #### Story dependencies
 
-Use `--depends-on` / `--remove-dependency` on `user-story update` to manage
+Use `--depends-on` / `--remove-dependency` on `scenario update` to manage
 which stories gate this one:
 
 ```bash
 # Replace the full dependency set (all parents at once)
-minitest --json --app <app_id> user-story update <story_id> \
+minitest --json --app <app_id> scenario update <story_id> \
   --depends-on <parent_id_1> --depends-on <parent_id_2>
 
 # Remove a single dependency without touching the others
-minitest --json --app <app_id> user-story update <story_id> \
+minitest --json --app <app_id> scenario update <story_id> \
   --remove-dependency <parent_id>
 
 # Clear all dependencies (pass empty --depends-on list)
-minitest --json --app <app_id> user-story update <story_id> --depends-on ""
+minitest --json --app <app_id> scenario update <story_id> --depends-on ""
 ```
 
 > `--depends-on` is a **full replace**: omitting a previously set parent removes
@@ -502,36 +510,36 @@ own. When the customer has **explicitly** allowed a story's commit (for example
 zero-value test bookings that auto-cancel), record it, quoting their words:
 
 ```bash
-minitest --json --app <app_id> user-story allow-setup-commit <setup_story_id> \
+minitest --json --app <app_id> scenario allow-setup-commit <setup_story_id> \
   --customer-quote "Yes, you can make flexible Pay At Hotel bookings with the test card"
 
 # Undo it: validation goes back to stopping before the commit step
-minitest --json --app <app_id> user-story revoke-setup-commit <setup_story_id>
+minitest --json --app <app_id> scenario revoke-setup-commit <setup_story_id>
 ```
 
 Validation of that story may then complete its commit, and every story that
 `--depends-on` it runs it first on the same device and starts from what it
-produced. `user-story get` shows the recorded permission as
+produced. `scenario get` shows the recorded permission as
 `setupCommitPermission`. Never record one the customer did not state.
 
 #### Device count
 
 A story's **device count** is how many virtual devices a single run provisions.
 By default it is **auto**: one device per bound persona (minimum 1). Set an
-explicit override with `--device-count` on `user-story create` / `update`. The
+explicit override with `--device-count` on `scenario create` / `update`. The
 value is capped server-side at `min(3, tenant device quota)`.
 
 ```bash
 # Create a story that always runs on 2 devices
-minitest --json --app <app_id> user-story create \
+minitest --json --app <app_id> scenario create \
   --name "Two-player match" --tag multiplayer --device-count 2 \
   --criteria "Both players see the shared game state"
 
 # Override an existing story to 3 devices
-minitest --json --app <app_id> user-story update <story_id> --device-count 3
+minitest --json --app <app_id> scenario update <story_id> --device-count 3
 
 # Reset back to auto (one device per bound persona)
-minitest --json --app <app_id> user-story update <story_id> --device-count auto
+minitest --json --app <app_id> scenario update <story_id> --device-count auto
 ```
 
 Use more than one device only for flows that genuinely need concurrent devices:
@@ -547,23 +555,23 @@ and `get` show the effective device count when it is greater than 1; omitting
 
 #### Camera media (web runs)
 
-Use `--camera-media` on `user-story create` or `user-story update` to feed a
+Use `--camera-media` on `scenario create` or `scenario update` to feed a
 specific image or video into the virtual webcam during web runs (e.g. a story
 that uploads an ID photo or scans a QR code). The value is either a **local
 file path** to upload or an **existing test-file ID** to reuse:
 
 ```bash
 # Upload a local image/video and attach it to a new story
-minitest --app <app_id> user-story create \
+minitest --app <app_id> scenario create \
   --name "Scan QR to check in" --tag check-in \
   --camera-media ./fixtures/checkin-qr.png
 
 # Reuse an already-uploaded test file by its ID
-minitest --app <app_id> user-story update <story_id> \
+minitest --app <app_id> scenario update <story_id> \
   --camera-media <test_file_id>
 
 # Reset the story back to the built-in default camera feed
-minitest --app <app_id> user-story update <story_id> --clear-camera-media
+minitest --app <app_id> scenario update <story_id> --clear-camera-media
 ```
 
 > A **UUID** value is treated as an existing test-file ID and reused as-is; any
@@ -600,18 +608,18 @@ minitest --json --app <app_id> tags update "checkout" --name "payments"
 minitest --json --app <app_id> tags delete "payments" --yes
 ```
 
-`--tag` is repeatable on user-story commands (matching is case-insensitive). On
+`--tag` is repeatable on scenario commands (matching is case-insensitive). On
 `update`, any `--tag` replaces the scenario's whole tag set; `--clear-tags`
 removes them all. `list --tag` returns scenarios carrying any of the given tags.
 
 ```bash
-minitest --json --app <app_id> user-story create --name "Upgrade to Pro" \
+minitest --json --app <app_id> scenario create --name "Upgrade to Pro" \
   --tag checkout --tag subscription \
   --criteria "The plan badge reads Pro after checkout"
 
-minitest --json --app <app_id> user-story update <id> --tag checkout
-minitest --json --app <app_id> user-story update <id> --clear-tags
-minitest --json --app <app_id> user-story list --tag checkout --tag auth
+minitest --json --app <app_id> scenario update <id> --tag checkout
+minitest --json --app <app_id> scenario update <id> --clear-tags
+minitest --json --app <app_id> scenario list --tag checkout --tag auth
 ```
 
 Run every scenario carrying a tag in one batch with `run start --tag` (see
@@ -778,7 +786,7 @@ left untouched alongside `guidance`.
 
 ### 5. Run tests
 
-Execute a user story on native cloud phone/tablet lanes or the web lane. For native runs,
+Execute a scenario on native cloud phone/tablet lanes or the web lane. For native runs,
 provide at least one of `--ios-build` or `--android-build`; single-platform apps
 may omit the other. For web-only runs, pass `--web` by itself; native and web
 lanes can also be combined. Web runs use the app's configured web URL and default web
@@ -805,7 +813,7 @@ Surface the distinction and never claim native iPad support from a passing
 compatibility-mode or unknown-metadata run.
 
 ```bash
-# Run a single user story (by name or UUID) and wait for results
+# Run a single scenario (by name or UUID) and wait for results
 minitest --json --app <app_id> run start "User Login" \
   --ios-build <ios_build_id> \
   --android-build <android_build_id>
@@ -836,12 +844,12 @@ minitest --json --app <app_id> run start --tag checkout --tag auth \
   --ios-build <ios_build_id> \
   --android-build <android_build_id>
 
-# Run ALL user stories at once (creates one batch, fire-and-forget)
+# Run ALL scenarios at once (creates one batch, fire-and-forget)
 minitest --json --app <app_id> run all \
   --ios-build <ios_build_id> \
   --android-build <android_build_id>
 
-# Run ALL user stories on web targets only
+# Run ALL scenarios on web targets only
 minitest --json --app <app_id> run all --web
 
 # Build a required commit SHA and run its suite, polling by default
@@ -861,7 +869,7 @@ cancel, and 4 when the run (or the `--platform` / `--srp` you asked for) does no
 exist.
 
 Under the hood, `run start` and `run all` create a **batch**. A single run is
-just a batch with one user story. With `--json --no-watch`, `run start` emits
+just a batch with one scenario. With `--json --no-watch`, `run start` emits
 only `{"runId": …, "status": …}`.
 
 `--web` requires a web execution target configured on the app in the Minitest
@@ -883,7 +891,7 @@ minitest --json --app <app_id> run status <run_id>
 # Poll until completion
 minitest --json --app <app_id> run status <run_id> --watch
 
-# List all runs for a user story
+# List all runs for a scenario
 minitest --json --app <app_id> run list "User Login"
 minitest --json --app <app_id> run list "User Login" --status failed
 minitest --json --app <app_id> run list "User Login" --all
@@ -1091,14 +1099,14 @@ story-run id. Route it to `--batch` directly; passing it to `issues list --run`
 fails with a plain "StoryRun not found" that gives no hint of the mistake.
 
 From a run URL, use `batch_id` with `run verdicts` or `issues list --batch`, and
-use the optional `flow` value as the user story ID when needed. From an issue
+use the optional `flow` value as the scenario ID when needed. From an issue
 URL, use `issueId` with `issues list --issue` or `issues fix`. The CLI itself
 never parses webapp URLs.
 
 ## CI / Automation Pattern
 
 ```bash
-# Native CI: upload builds, run all user stories, collect results
+# Native CI: upload builds, run all scenarios, collect results
 export MINITEST_APP_ID="<app_id>"
 
 minitest --json build upload ./app.apk
@@ -1121,13 +1129,13 @@ JSON goes to stdout (camelCase keys, matching the backend API), diagnostics go
 to stderr. Safe to pipe:
 
 ```bash
-minitest --json --app $APP user-story list | jq '.items[].name'
+minitest --json --app $APP scenario list | jq '.items[].name'
 minitest --json --app $APP run status <run_id> | jq '.status'
 minitest --json --app $APP batch list | jq '.items[] | {id, status}'
 ```
 
 Two shapes to expect: **list endpoints are paginated envelopes**
-(`{items, page, pageSize, total}`) — `user-story`, `build`, `run`, `batch`,
+(`{items, page, pageSize, total}`) — `scenario`, `build`, `run`, `batch`,
 `test-profile`, `test-file` — while `apps list` and `tags list` return
 **bare arrays**. Reach for `.items[]` first and fall back to `.[]`.
 
@@ -1153,25 +1161,25 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Simulate dependency change | `minitest --json --app ID apps dependencies <id> --simulate --add <story>:<parent>` |
 | Create native app   | `minitest --json apps create --name "My App" --platform ios --platform android [--tenant ID] [--description ...] [--slug ...] [--icon ./icon.png]` |
 | Create web app      | `minitest --json apps create --name "My Web App" --platform web --web-url https://example.com [--tenant ID]` |
-| Create user story   | `minitest --json --app ID user-story create --name "..." --tag auth --criteria "..."` |
-| Create user story with profile | `minitest --json --app ID user-story create --name "..." --tag auth --profile <profile_id> --criteria "..."` |
-| List user stories   | `minitest --json --app ID user-story list`                                               |
-| Update user story   | `minitest --json --app ID user-story update <id> --add-criteria "..."`                   |
-| Reword one criterion (keep history) | `minitest --json --app ID user-story update <id> --set-criterion <crit_id>="text"` |
-| Revert criterion to a version | `minitest --json --app ID user-story update <id> --revert-criterion <crit_id>=<version_id>` |
-| Set story dependencies | `minitest --json --app ID user-story update <id> --depends-on <parent_id> [--depends-on <parent_id2>]` |
-| Remove a dependency | `minitest --json --app ID user-story update <id> --remove-dependency <parent_id>`        |
-| Allow a setup commit | `minitest --json --app ID user-story allow-setup-commit <id> --customer-quote "..."` |
-| Revoke a setup commit | `minitest --json --app ID user-story revoke-setup-commit <id>`                        |
-| Set story device count | `minitest --json --app ID user-story update <id> --device-count 2` (or `auto` to reset) |
-| Set story camera media | `minitest --json --app ID user-story update <id> --camera-media <path-or-file-id>` (video ≤ 50 MB / image ≤ 25 MB) |
-| Clear story camera media | `minitest --json --app ID user-story update <id> --clear-camera-media` (back to default feed) |
+| Create scenario   | `minitest --json --app ID scenario create --name "..." --tag auth --criteria "..."` |
+| Create scenario with profile | `minitest --json --app ID scenario create --name "..." --tag auth --profile <profile_id> --criteria "..."` |
+| List scenarios   | `minitest --json --app ID scenario list`                                               |
+| Update scenario   | `minitest --json --app ID scenario update <id> --add-criteria "..."`                   |
+| Reword one criterion (keep history) | `minitest --json --app ID scenario update <id> --set-criterion <crit_id>="text"` |
+| Revert criterion to a version | `minitest --json --app ID scenario update <id> --revert-criterion <crit_id>=<version_id>` |
+| Set story dependencies | `minitest --json --app ID scenario update <id> --depends-on <parent_id> [--depends-on <parent_id2>]` |
+| Remove a dependency | `minitest --json --app ID scenario update <id> --remove-dependency <parent_id>`        |
+| Allow a setup commit | `minitest --json --app ID scenario allow-setup-commit <id> --customer-quote "..."` |
+| Revoke a setup commit | `minitest --json --app ID scenario revoke-setup-commit <id>`                        |
+| Set story device count | `minitest --json --app ID scenario update <id> --device-count 2` (or `auto` to reset) |
+| Set story camera media | `minitest --json --app ID scenario update <id> --camera-media <path-or-file-id>` (video ≤ 50 MB / image ≤ 25 MB) |
+| Clear story camera media | `minitest --json --app ID scenario update <id> --clear-camera-media` (back to default feed) |
 | List tags           | `minitest --json --app ID tags list`                                                     |
 | Create tag          | `minitest --json --app ID tags create --name "checkout" [--color amber] [--description "..."]` |
 | Rename tag          | `minitest --json --app ID tags update "checkout" --name "payments"`                      |
 | Delete tag          | `minitest --json --app ID tags delete "payments" --yes` (removed from every scenario)   |
-| Tag a story         | `minitest --json --app ID user-story update <id> --tag auth [--tag smoke]` (replaces the set) |
-| Filter stories by tag | `minitest --json --app ID user-story list --tag auth`                                  |
+| Tag a story         | `minitest --json --app ID scenario update <id> --tag auth [--tag smoke]` (replaces the set) |
+| Filter stories by tag | `minitest --json --app ID scenario list --tag auth`                                  |
 | List mapped screens | `minitest --json --app ID screens list [--platform ios]`                                 |
 | See the crawl's shape | `minitest --app ID screens list --tree`                                                |
 | Screens the crawl was blocked on | `minitest --json --app ID screens list --blocked`                           |
@@ -1182,7 +1190,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Create an app skill | `minitest --json --app ID app-skill create <name> --description "Use when …" --instructions-file ./skill.md` |
 | Propose a skill fix | `minitest --json --app ID app-skill propose <name> --reason "…" --instructions-file ./skill.md` |
 | Set a skill secret  | `printf '%s' "$V" \| minitest --app ID app-skill secret set <name> <SECRET_NAME>` (value from stdin, never shown again) |
-| Link skills to story | `minitest --json --app ID user-story-binding set-skills <story_id> --skill <name>`      |
+| Link skills to story | `minitest --json --app ID scenario-binding set-skills <story_id> --skill <name>`      |
 | List env vars       | `minitest --json --app ID env list` (values masked; `--show` reveals)                    |
 | Reveal one env var  | `minitest --app ID env get <KEY>` (prints the value verbatim to stdout)           |
 | Set an env var      | `minitest --json --app ID env set <KEY> <VALUE> --yes [--dry-run]`                       |
@@ -1231,17 +1239,17 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Get test file       | `minitest --json --app ID test-file get <id>` (returns short-lived download URL)         |
 | Update test file    | `minitest --json --app ID test-file update <id> [--name ...] [--clear-note]`             |
 | Delete test file    | `minitest --json --app ID test-file delete <id> --force`                                 |
-| Bind profile to story | `minitest --json --app ID user-story-binding set-profile <story_id> --profile <id>`    |
-| Clear story profile | `minitest --json --app ID user-story-binding set-profile <story_id> --clear`             |
-| Bind files to story | `minitest --json --app ID user-story-binding set-files <story_id> --file <id> --file <id>` |
-| List story files    | `minitest --json --app ID user-story-binding list-files <story_id>`                      |
+| Bind profile to story | `minitest --json --app ID scenario-binding set-profile <story_id> --profile <id>`    |
+| Clear story profile | `minitest --json --app ID scenario-binding set-profile <story_id> --clear`             |
+| Bind files to story | `minitest --json --app ID scenario-binding set-files <story_id> --file <id> --file <id>` |
+| List story files    | `minitest --json --app ID scenario-binding list-files <story_id>`                      |
 | Branch the test suite | `minitest --json --app ID df list\|create\|show\|apply\|delete` — see [`commands/draft-features.md`](commands/draft-features.md) |
 
 ## Test profiles, test files, and story bindings
 
 Test profiles let you store credentials (username/password/about, or
 phone-number/static-otp-code for phone-OTP personas) that the agent will use
-when running a user story. They are app-scoped by default. Shared profiles are
+when running a scenario. They are app-scoped by default. Shared profiles are
 Minitap-provided accounts available to all test-enabled tenants and surface via
 `list-shared` (currently only a Google account).
 
@@ -1250,7 +1258,7 @@ get pushed into the test environment before the agent runs the story. Use them
 for things like profile photos, sample PDFs, or recordings the story under test
 depends on.
 
-Bindings link profiles or files to a specific user story:
+Bindings link profiles or files to a specific scenario:
 
 - Profile binding: at most one profile per story. `set-profile --clear` unbinds.
 - File binding: many files per story. `set-files` is **atomic replace** — pass

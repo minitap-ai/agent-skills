@@ -100,8 +100,8 @@ When a `[Structured apply turn]` arrives with the confirmed proposal:
 2. Apply the full new parent set per changed story:
 
    ```bash
-   minitest user-story update <story_id> --depends-on <parent_id> [--depends-on <parent_id2> ...]
-   minitest user-story update <story_id> --remove-dependency <old_parent_id>
+   minitest scenario update <story_id> --depends-on <parent_id> [--depends-on <parent_id2> ...]
+   minitest scenario update <story_id> --remove-dependency <old_parent_id>
    ```
 
    `--depends-on` REPLACES the whole parent set (pass every parent, including
