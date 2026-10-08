@@ -56,7 +56,7 @@ minitest --json --app <app_id> app-skill create clutch-test-backend \
   --description "Use to create personas, fund balances and create, close, resolve or void markets." \
   --instructions-file ./clutch-test-backend.md
 printf '%s' "$KEY" | minitest --app <app_id> app-skill secret set clutch-test-backend CLUTCH_TEST_API_KEY
-minitest --json --app <app_id> user-story-binding set-skills <story_id> --skill clutch-test-backend
+minitest --json --app <app_id> scenario-binding set-skills <story_id> --skill clutch-test-backend
 ```
 
 ## Maintaining a skill
@@ -91,8 +91,8 @@ version can no longer be accepted.
 | Delete and unlink scenarios | `minitest --json --app ID app-skill delete <name> --unlink-scenarios --yes` |
 | Set a secret (stdin) | `printf '%s' "$V" \| minitest --app ID app-skill secret set <name> <SECRET_NAME>` |
 | List / remove secrets | `minitest --json --app ID app-skill secret list <name>` / `secret unset <name> <SECRET_NAME>` |
-| Link skills to a scenario | `minitest --json --app ID user-story-binding set-skills <story_id> --skill <name> [--skill …]` |
-| Unlink all | `minitest --json --app ID user-story-binding set-skills <story_id> --clear` |
+| Link skills to a scenario | `minitest --json --app ID scenario-binding set-skills <story_id> --skill <name> [--skill …]` |
+| Unlink all | `minitest --json --app ID scenario-binding set-skills <story_id> --clear` |
 
 `delete` on a skill linked to scenarios exits 6 and lists them; nothing is
 deleted until you pass `--unlink-scenarios --yes`. A deleted skill's history
