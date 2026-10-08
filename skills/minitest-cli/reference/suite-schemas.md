@@ -24,7 +24,7 @@ scenarios:
   - id: gate-signin-premium-seeded
     kind: gate                          # gate | feature
     name: "Sign in as the premium seeded account"
-    type: login                         # a minitest flow type (see minitest-target.md)
+    tags: [Auth]                        # 1–3 generic feature-area tags (see minitest-target.md)
     personas: [premium-seeded]          # the persona(s) this scenario binds — a
                                         # gate ESTABLISHES exactly one, so a 1-element list
     depends_on: []
@@ -43,7 +43,7 @@ scenarios:
   - id: checkout-saved-card
     kind: feature
     name: "Checkout with a saved card"
-    type: checkout
+    tags: [Checkout]
     personas: [premium-seeded]          # account(s) expected connected at start
     depends_on: [gate-signin-premium-seeded]
     dependency_rationale: >
@@ -72,7 +72,7 @@ scenarios:
   - id: order-handoff-driver-diner
     kind: feature
     name: "Diner places an order, driver accepts and delivers it"
-    type: e2e
+    tags: [Orders, Delivery]
     personas: [diner-seeded, driver-seeded]   # both co-actors of this one story
     depends_on: []                      # gates for each persona go here if they have one
     dependency_rationale: null

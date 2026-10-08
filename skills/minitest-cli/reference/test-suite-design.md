@@ -205,7 +205,7 @@ Never invent any other card, and never put one in `about`. A card lets the agent
 - ✅ `minitest-booker@qa.minitap.ai`, about: "Makes and manages bookings. Confirmation numbers and lookup codes arrive in this inbox; use the newest."
 - ❌ Asking the customer for an active booking, its confirmation email, or "an email that has never signed up".
 
-Any email field an app asks for takes a `@qa.minitap.ai` address, and a contact phone field nothing is sent to takes a number reserved for fiction (UK `+44 7700 900123`) — only a number that must receive a code is the customer's to provide. A flow that needs an address nobody has used before runs as "New user", which gets a fresh one every run; a fixed address is spent by its first run. "New user" cannot hold a test card, so when that flow also pays, create a persona that holds the card and whose `about` says: "Sign up with a fresh `<prefix>-<random>@qa.minitap.ai` every run; never reuse this address."
+Any email field an app asks for takes a `@qa.minitap.ai` address, and a contact phone field nothing is sent to takes a number reserved for fiction (UK `+44 7700 900123`) — only a number that must receive a code is the customer's to provide. When a phone field already shows or has selected a country code (a flag, a `+44` prefix, a country picker), type only the national number and check what the field now shows. A value the form rejects is a field-entry problem: clear it fully and enter it another way (the national digits, the country picked from its picker, the number typed key by key). A value you typed yourself, or data on an account this run created, is never the customer's account to fix. A flow that needs an address nobody has used before runs as "New user", which gets a fresh one every run; a fixed address is spent by its first run. "New user" cannot hold a test card, so when that flow also pays, create a persona that holds the card and whose `about` says: "Sign up with a fresh `<prefix>-<random>@qa.minitap.ai` every run; never reuse this address."
 
 **Personas vs. devices.** A persona is an *identity*; a device is a *surface*, and the two are decoupled — a scenario's device count is set independently of how many personas it binds (see "Device count" below). Bind the personas the journey needs, then decide the device count from *how* those identities are used:
 
@@ -218,7 +218,7 @@ Any email field an app asks for takes a `@qa.minitap.ai` address, and a contact 
 - **Names** are unique per app (case-insensitive), at most 255 characters. Username and password ≤255, `about` ≤2000, `static_otp_code` ≤32, `phone_number` is E.164.
 - **Deleting** a profile still bound to a story is refused (409); unbind it first.
 - **Shared profiles** can be bound but are read-only: they cannot be edited, deleted, or set as default.
-- **`exclusive_use`** keeps two concurrently running tests off the same persona (API only; minitest-cli has no flag for it).
+- **`exclusive_use`** keeps two concurrently running tests off the same account — matched by login (username, else phone number), so it also covers the same login bound as a persona in another app. Set it on every persona that signs into that account: a non-exclusive persona on the same login is not held back (API only; minitest-cli has no flag for it).
 - **Status:** each persona has a provisioning status (`untested`, `unverified`, `working`, `failed`). Editing a credential resets it; only a real sign-in sets `working` or `failed`.
 
 **Coverage check:** before story creation, verify you have a profile for every distinct persona visible in the app. Missing a profile means missing entire feature surfaces.
@@ -298,7 +298,7 @@ Two questions, in order:
 
 The bar is **deliberately high**. Cheap in-app state (an item in the cart, a filter applied, a screen navigated to) is always reducible — the story does it itself. The feature's value comes from the few foundational flows (login, onboarding, subscription upgrade) and from genuinely irreversible produced state, not from modeling the whole app graph.
 
-**A record only a commit makes is irreducible, even when the commit is cheap.** A booking or an order is real state under the persona's address, and the agents that explore and check feasibility stop at a commit step unless the customer explicitly allowed that story's commit (`minitest user-story allow-setup-commit`). With that permission, the producer's feasibility check performs its commit, and a direct dependent's check runs the producer first on the same device. Without it, a story that makes the record inline as setup is only ever checked up to that setup step. Give it a producer story on the same persona, and depend on it. Where the customer does not allow that commit, no story can produce the record: scope the reading story to where it stops and say so, rather than inventing a producer.
+**A record only a commit makes is irreducible, even when the commit is cheap.** A booking or an order is real state under the persona's address, and the agents that explore and check feasibility stop at a commit step unless the customer explicitly allowed that story's commit (`minitest scenario allow-setup-commit`). With that permission, the producer's feasibility check performs its commit, and a direct dependent's check runs the producer first on the same device. Without it, a story that makes the record inline as setup is only ever checked up to that setup step. Give it a producer story on the same persona, and depend on it. Where the customer does not allow that commit, no story can produce the record: scope the reading story to where it stops and say so, rather than inventing a producer.
 
 **Every non-gate edge names its state.** A dependency that exists for device-reuse (not just fail-fast) has to justify itself: name the exact state the parent *produces* and the child *consumes*, and say why that state is expensive or irreversible to re-create — that's what keeps it above the reducible bar. ✅ "Checkout depends on Place Order: Place Order leaves the account with a placed, non-cancellable order that Checkout's refund flow reads." ✅ "Manage a booking depends on Make a booking: Make a booking leaves an active reservation under the persona's `@qa.minitap.ai` address, whose confirmation number Manage a booking reads from that inbox." ❌ "Checkout depends on Add to Cart" — a cart item is cheap in-app state the child sets up itself. **No such state, no edge:** if you can't name it, the dependency is reducible and shouldn't exist. Gate (sign-in/onboarding) edges are exempt — they exist purely for fail-fast, so "requires the persona's session" is reason enough.
 
@@ -451,7 +451,7 @@ Then check the structure mechanically:
 - Every distinct capability and account-differentiator you found is covered by at least one story.
 - Every non-gate edge names the state its parent produces and the child reads; a record only a commit makes comes from a producer on the same persona.
 - Every story that binds several personas but switches between them sequentially has an explicit device count of 1.
-- Every acceptance criterion is checkable on-screen — no backend, database, or network assertions.
+- Every acceptance criterion is checkable on-screen — no database, server-log or analytics assertions. A criterion may compare the screen against an API response the app itself received.
 
 Fix issues in place; don't redesign a working suite around one bad edge.
 
@@ -476,19 +476,20 @@ unsure of a flag.
    Record each returned id.
 3. **Create scenarios in dependency order** — parents before children. For each,
    fold its `steps` into the story **description** as the big UX path plus the
-   feature/product-area anchor (minitest stories persist no steps field), pass
-   the acceptance criteria, bind the persona, and wire prerequisites:
-   `minitest user-story create --name "<name>" --type "<flow type>" --description "<UX path + anchor>" --criteria "<criterion>" [--criteria ...] --profile "<persona id>" [--depends-on "<parent story id>" ...]`
+   feature/product-area anchor (minitest scenarios persist no steps field), pass
+   the acceptance criteria, pass its tags (minitest-target.md's tag rules), bind
+   the persona, and wire prerequisites:
+   `minitest scenario create --name "<name>" --tag "<tag>" [--tag ...] --description "<UX path + anchor>" --criteria "<criterion>" [--criteria ...] --profile "<persona id>" [--depends-on "<parent story id>" ...]`
    Set `--device-count` only when minitest-target.md's device rules call for it.
 4. **Verify the wiring.** `minitest apps dependencies` to review the graph; fix
-   with `minitest user-story update` / `minitest user-story-binding set-profile`.
+   with `minitest scenario update` / `minitest scenario-binding set-profile`.
 
 **Checkpoint — HARD STOP before any CLI creation (a `question` the user must
 answer):** present the full planned suite — the persona table, the scenario table
 (id, name, persona, input→output account, depends_on), the dependency DAG, and
 the coverage summary — and get **explicit user approval via a `question` call
 BEFORE creating anything** with the minitest CLI (no app-knowledge update, no
-test-profile, no user-story until the user approves). Do not run a single
+test-profile, no scenario until the user approves). Do not run a single
 creating CLI command until the user has approved. After applying, offer to replay
 the suite: hand off to the web app's "Run tests" flow, or trigger a run through
 the CLI if the user wants one now.
