@@ -18,8 +18,10 @@ keys it by `issueKey`; never track pending, handled, or dismissed state yourself
 
 ## 1. Read the verdicts
 
-Resolve the batch id (the user's "last run" is the first entry from
-`minitest --json batch list`; a run URL contains the id), then run:
+Resolve every batch id in scope: each run the user names (a pasted id, a run
+URL). Only when they name none, fall back to the run your context points to or
+their "last run" (the first entry from `minitest --json batch list`). Read every
+run in scope before you write anything; for each one, run:
 
 ```bash
 minitest --json run verdicts <batch_id> --actionable
