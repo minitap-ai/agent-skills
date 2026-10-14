@@ -318,6 +318,44 @@ is required: the command exits 1 with a clear error otherwise.
 > to launch until then. Creating a web app end-to-end is not a CLI-only flow.
 > There is also no `apps delete`, so avoid creating throwaway apps.
 
+#### Network settings: residential proxy and private network
+
+Two app settings change where a run's traffic goes. Both apply from the next
+run on, and both are readable by anyone in the workspace but **changeable only
+by a workspace owner or admin** (exit 2 with "Only workspace owners and admins
+can change this setting." otherwise — say so to the user instead of retrying).
+
+- **Residential proxy** — for apps that geo-block or behave differently by
+  region: traffic to the listed domains leaves from a residential IP in one
+  country; every other request keeps the normal network.
+- **Private network** — for apps whose backend or pages live on the customer's
+  internal network (staging, VPN-only hosts): the listed domains and ports are
+  reached through a Minitest connector running inside that network.
+
+```bash
+# Residential proxy
+minitest --json --app <app_id> apps residential-proxy show
+minitest --json --app <app_id> apps residential-proxy set --enable --country tr \
+  --domain ipinfo.io [--domain ...] [--remove-domain <d>] [--clear-domains]
+minitest --json --app <app_id> apps residential-proxy set --disable
+
+# Private network
+minitest --json --app <app_id> apps private-network show
+minitest --json --app <app_id> apps private-network connectors   # online/offline connectors
+minitest --json --app <app_id> apps private-network set --enable \
+  --connector "<name-or-id>" --domain api.stg.corp.internal [--domain ...] \
+  [--remove-domain <d>] [--clear-domains] [--port 443 ...]
+```
+
+`show` returns the allowed values (`availableCountries`, `domainPattern`,
+`maxDomains`) — read it before `set`, which validates against them before
+writing. `--clear-domains --domain a --domain b` replaces the domain list;
+`--port` replaces the ports (default 443). Turning the private network on needs
+a connector and at least one domain. **Connectors cannot be created from the
+CLI:** if `connectors` lists none (or none online), ask a workspace owner or
+admin to create one in the web app under **Workspace settings → Private
+network** and start it inside their network.
+
 ### 2. Create scenarios
 
 A **scenario** describes a user journey to test. It has a name, a few tags, an
@@ -1161,6 +1199,8 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Simulate dependency change | `minitest --json --app ID apps dependencies <id> --simulate --add <story>:<parent>` |
 | Create native app   | `minitest --json apps create --name "My App" --platform ios --platform android [--tenant ID] [--description ...] [--slug ...] [--icon ./icon.png]` |
 | Create web app      | `minitest --json apps create --name "My Web App" --platform web --web-url https://example.com [--tenant ID]` |
+| Residential proxy (owner/admin to change) | `minitest --json --app ID apps residential-proxy show` / `set [--enable\|--disable] [--country tr] [--domain D ...]` |
+| Private network (owner/admin to change) | `minitest --json --app ID apps private-network show` / `connectors` / `set [--enable\|--disable] [--connector NAME] [--domain D ...] [--port 443 ...]` |
 | Create scenario   | `minitest --json --app ID scenario create --name "..." --tag auth --criteria "..."` |
 | Create scenario with profile | `minitest --json --app ID scenario create --name "..." --tag auth --profile <profile_id> --criteria "..."` |
 | List scenarios   | `minitest --json --app ID scenario list`                                               |
