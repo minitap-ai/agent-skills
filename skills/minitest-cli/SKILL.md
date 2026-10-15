@@ -332,6 +332,9 @@ can change this setting." otherwise — say so to the user instead of retrying).
   internal network (staging, VPN-only hosts): the listed domains and ports are
   reached through a Minitest connector running inside that network.
 
+Both work on every kind of run: cloud emulators and simulators, the farm's
+physical Android phones and iPhones, and the browser for web apps.
+
 ```bash
 # Residential proxy
 minitest --json --app <app_id> apps residential-proxy show
