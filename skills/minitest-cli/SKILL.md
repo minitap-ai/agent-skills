@@ -199,6 +199,9 @@ Three credential sources, in priority order:
 
 If both `MINITEST_TOKEN` and `MINITEST_API_KEY` are set, `MINITEST_TOKEN` wins and a stderr warning is emitted once per process.
 
+`minitest draft` accepts the same credentials (it calls Conductor at
+`MINITEST_CONDUCTOR_URL`); a key scoped to one app only reaches that app's drafts.
+
 ### Key rotation
 
 `mtk_` keys are mintable and revocable but do not expire. To rotate: mint a new key, update the secret in your CI/orchestrator, then revoke the old key:
@@ -247,7 +250,9 @@ Credentials rejected on a normal command exit 1, not 2 — only the `auth`
 commands themselves use 2.
 
 Only 3 is worth a blind retry. 6 comes from `df` (explained in
-[`commands/draft-features.md`](commands/draft-features.md)) and from
+[`commands/draft-features.md`](commands/draft-features.md)), from `draft`
+(the draft's state does not allow it: `draft get` it, see
+[`commands/drafts.md`](commands/drafts.md)) and from
 `app-skill delete` on a skill still linked to scenarios.
 
 ## Core Workflow
@@ -1286,7 +1291,11 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Clear story profile | `minitest --json --app ID scenario-binding set-profile <story_id> --clear`             |
 | Bind files to story | `minitest --json --app ID scenario-binding set-files <story_id> --file <id> --file <id>` |
 | List story files    | `minitest --json --app ID scenario-binding list-files <story_id>`                      |
-| Branch the test suite | `minitest --json --app ID df list\|create\|show\|apply\|delete` — see [`commands/draft-features.md`](commands/draft-features.md) |
+| Ask Mini for a suite change | `minitest --json --app ID draft create --message "..." [--auto-check] [--auto-merge]` — see [`commands/drafts.md`](commands/drafts.md) |
+| Follow / talk to Mini on a draft | `minitest --json --app ID draft get <id> --watch`, `draft message <id> --message "..."`, `draft messages <id>` |
+| Answer Mini on a draft | `minitest --json --app ID draft ask list <id>`, `draft ask answer <id> <ask_id> --answer "..." \| --field K=V --field-file SECRET_KEY=-` |
+| Check / merge a draft | `minitest --json --app ID draft check\|build\|merge\|discard\|revert <id>`, `draft not-a-bug <id> <scenario_id>` |
+| Branch the test suite yourself (low level) | `minitest --json --app ID df list\|create\|show\|apply\|delete` — see [`commands/draft-features.md`](commands/draft-features.md) |
 
 ## Test profiles, test files, and story bindings
 
@@ -1308,6 +1317,21 @@ Bindings link profiles or files to a specific scenario:
   every file id you want bound; omitted ids are unbound. `--clear` unbinds all.
 - Skill binding: `set-skills` is atomic replace by skill name; Mini loads the
   linked skills before it starts. See [`commands/app-skills.md`](commands/app-skills.md).
+
+## Drafts with Mini (`minitest draft`)
+
+To change the test suite, prefer asking Mini: `minitest draft create --message
+"..."` opens a draft (the webapp's *Drafts*), Mini writes the scenarios, the
+draft checks them on a real build, and you merge the proven change. Follow it
+with `draft get <id> --watch`, keep talking with `draft message`, answer Mini's
+questions with `draft ask answer` (secret fields only from a file or stdin), and
+finish with `draft merge`, or let `--auto-check --auto-merge` do it unattended.
+Read [`commands/drafts.md`](commands/drafts.md) for states, watch rules, ask
+payloads and safe retries.
+
+**`draft` vs `df`:** a draft's branch belongs to Mini. Never `df apply` into it
+(its `draftFeatureId`) — tell Mini instead. `df` is only for branches you write
+yourself, end to end.
 
 ## Draft features (`minitest df`)
 

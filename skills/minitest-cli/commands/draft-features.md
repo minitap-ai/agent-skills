@@ -6,6 +6,10 @@ main — new stories, edited ones, deletions, dependency changes — never a cop
 main. Everything you do to a branch goes through one atomic call, so a branch is
 never half-written.
 
+> To have Mini write the change for you, use `minitest draft` instead (see
+> [`drafts.md`](drafts.md)). Never `df apply` into the branch of a Mini draft —
+> Mini is its only author.
+
 ```bash
 minitest --json --app $APP df list --status open
 minitest --json --app $APP df create --title "Guest checkout" \
