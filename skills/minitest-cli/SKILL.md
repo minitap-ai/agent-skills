@@ -825,6 +825,19 @@ remediation, or summary exists. When `source` is `withheld` the CLI also blanks
 that item, so there is nothing to dig into. Otherwise the envelope fields are
 left untouched alongside `guidance`.
 
+Read one build by its id, for example a build the user names or one a run was
+started on:
+
+```bash
+minitest --json --app <app_id> build get <build_id>
+```
+
+It returns a single object shaped like one `build list` item, including
+`appVersion`, `buildNumber`, `commitSha`, `commitTitle`, `status`,
+`verificationStatus`, and the same `guidance` and withheld-envelope rules. It
+reads the build whatever its status. A build of another app, or an unknown id,
+exits 4.
+
 ### 5. Run tests
 
 Execute a scenario on native cloud phone/tablet lanes or the web lane. For native runs,
@@ -1094,6 +1107,18 @@ and build number, then `no build info attached`. It does not inspect repository
 history or compute commits ahead. Failed code builds may carry a build-level fix
 prompt. Fix prompts from infrastructure failures are withheld.
 
+Read one issue by its failure ID, whatever its status:
+
+```bash
+minitest --app <app_id> issues get <failure_id>
+```
+
+It always emits JSON `{"issue": {...}, "build": {...}}`: the same issue item and
+`build` provenance block as `issues list`, without a `scope` block. Use it when
+the user names a specific issue. `issues list --issue` drops a resolved issue
+unless you pass `--include-resolved`; `issues get` returns it with its `status`
+and `issueStatus`. An issue of another app, or an unknown ID, exits 4.
+
 Mark one or more app findings as fixed with their failure IDs:
 
 ```bash
@@ -1141,8 +1166,8 @@ fails with a plain "StoryRun not found" that gives no hint of the mistake.
 
 From a run URL, use `batch_id` with `run verdicts` or `issues list --batch`, and
 use the optional `flow` value as the scenario ID when needed. From an issue
-URL, use `issueId` with `issues list --issue` or `issues fix`. The CLI itself
-never parses webapp URLs.
+URL, use `issueId` with `issues get`, `issues list --issue`, or `issues fix`.
+The CLI itself never parses webapp URLs.
 
 ## CI / Automation Pattern
 
@@ -1241,6 +1266,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Clear all env vars  | `minitest --json --app ID env clear --yes [--dry-run]`                                   |
 | Upload native build | `minitest --json --app ID build upload ./app.apk`                                        |
 | List builds         | `minitest --json --app ID build list [--platform P] [--status S] [--kind K]`            |
+| Get one build       | `minitest --json --app ID build get <build_id>`                                          |
 | Build from GitHub commit | `minitest --json --app ID build from-commit [SHA] [--platform P] [--force-full]`   |
 | Run one native story| `minitest --json --app ID run start "Story Name" --ios-build X --android-build Y [--ios-device-type phone\|tablet] [--android-device-type phone\|tablet]` |
 | Run tagged native stories | `minitest --json --app ID run start --tag smoke --ios-build X [--ios-device-type phone\|tablet]` |
@@ -1256,6 +1282,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Get batch + runs    | `minitest --json --app ID batch get <batch_id>`                                          |
 | Batch verdicts (one call) | `minitest --json --app ID run verdicts <batch_id> [--platform P] [--only-failed] [--actionable] [--verbose]` |
 | List issues and fix prompts | `minitest --app ID issues list [--issue ID \| --run ID \| --batch ID] [--platform P] [--criticality C] [--include-resolved]` |
+| Get one issue       | `minitest --app ID issues get <failure_id>` (any status)                                 |
 | Mark app issues fixed | `minitest --app ID issues fix <failure_id> [<failure_id> ...]`                          |
 | Submit result feedback | `minitest --json --app ID run feedback <result_id> "text"`                         |
 | Recording + timed verdicts/actions | `minitest --json --app ID run recording <run_id> [--platform P] [--srp ID] [--device N] [--out DIR] [--criterion-frames N]` |
