@@ -58,7 +58,8 @@ Long messages: `--message-file brief.md`, or `--message-file -` for stdin.
 | Open asks | `draft ask list ID` |
 | Answer an ask | `draft ask answer ID ASK_ID [--answer TEXT \| --answer-file PATH] [--field K=V]... [--field-file K=PATH]...` |
 | Decline an ask | `draft ask decline ID ASK_ID [--reason R]` |
-| Check the changed scenarios | `draft check ID [--story SCENARIO_ID]... [--include-waiting]` |
+| Prove the draft on an open PR's head | `draft link-pr ID PR_NUMBER [--repo owner/name]` / `draft unlink-pr ID` |
+| Check the changed scenarios | `draft check ID [--story SCENARIO_ID]... [--again] [--include-waiting]` |
 | Build the commit a waiting draft needs | `draft build ID [--ref merge_commit\|main]` |
 | Merge / throw away | `draft merge ID` / `draft discard ID` |
 | Undo a merged draft | `draft revert ID [--reason R]` |
@@ -80,11 +81,13 @@ the server guards (merge refuses a draft that is not ready, etc.).
 | `asks` | Mini's open questions, each with `id`, `question`, `askType`, `answerFields` |
 | `stories` | The scenarios the draft adds, edits or removes, with their check state |
 | `autoCheck`, `autoMerge` | The unattended settings |
+| `linkedPr` | The PR the draft is proven on (`number`, `repo`), or absent |
+| `waitingFor` | When `waiting`: the change it waits for, the PR, and the build in flight (`build.status`, `build.commitSha`, `build.etaSeconds`) |
 
 `--watch` stops when:
 
 - `--until idle` (default): Mini is not writing and has nothing queued — read its reply, answer, or send the next message;
-- `--until settled`: idle **and** no check running — the verdict is in;
+- `--until settled`: idle, no check running **and** no build Conductor started for the draft in flight (e.g. a linked PR's head) — the verdict is in;
 - either way, as soon as the draft is closed or `needsUser` is true.
 
 It exits 1 after `--timeout` seconds and still prints the last snapshot; run it
@@ -110,6 +113,31 @@ minitest --json --app $APP draft ask answer $DRAFT $ASK \
 - Answering turns `autoMerge` off: a person is now in the loop. Turn it back on
   with `draft update` if you still want an unattended merge.
 - `ask decline` tells Mini to carry on without it.
+
+## Proving a draft on an open PR
+
+When the scenarios test app code that is still in a pull request, link the draft
+to the PR so it is proven on the PR's head commit, before the PR merges:
+
+```bash
+minitest --json --app $APP draft link-pr $DRAFT 128          # PR in the app's repository
+minitest --json --app $APP draft check $DRAFT                 # builds the PR head if needed
+minitest --json --app $APP draft get $DRAFT --watch --until settled --timeout 3600
+```
+
+- The check runs on a build of the PR's head. If none exists, Conductor builds
+  that commit itself on every platform the app ships (no `draft build`, no
+  upload) — the draft shows `state: waiting` with `waitingFor.build` until it
+  lands, then checks it.
+- New commits pushed to the PR: run `draft check $DRAFT --again` to prove the
+  new head (`--again` re-runs proven scenarios too).
+- Once the PR merges, the draft follows the merge commit; merge the draft after
+  the PR.
+- Never pass `--include-waiting` to a linked draft: it checks the newest build
+  there is, which may not contain the PR.
+- Only drafts you opened can be linked, on an app connected to GitHub (exit 6
+  otherwise); an unknown PR exits 4. `draft unlink-pr` goes back to the latest
+  build.
 
 ## Unattended drafts
 
