@@ -1295,6 +1295,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Follow / talk to Mini on a draft | `minitest --json --app ID draft get <id> --watch`, `draft message <id> --message "..."`, `draft messages <id>` |
 | Answer Mini on a draft | `minitest --json --app ID draft ask list <id>`, `draft ask answer <id> <ask_id> --answer "..." \| --field K=V --field-file SECRET_KEY=-` |
 | Check / merge a draft | `minitest --json --app ID draft check\|build\|merge\|discard\|revert <id>`, `draft not-a-bug <id> <scenario_id>` |
+| Prove a draft on an open PR | `minitest --json --app ID draft link-pr <id> <pr_number>` then `draft check <id>` (`--again` after new pushes) |
 | Branch the test suite yourself (low level) | `minitest --json --app ID df list\|create\|show\|apply\|delete` — see [`commands/draft-features.md`](commands/draft-features.md) |
 
 ## Test profiles, test files, and story bindings
