@@ -783,7 +783,25 @@ minitest --json --app <app_id> build list --platform ios --page-size 1
 ```
 
 Pass `--platform ios|android` to `build upload` when the filename does not end
-in `.ipa` / `.apk` and auto-detection cannot fire.
+in `.ipa` / `.apk` / `.apks` / `.app.zip` and auto-detection cannot fire.
+
+**Physical devices.** If the workspace has physical devices enabled, upload a
+device build with `--physical` (an Ad Hoc or Development `.ipa` signed for
+Minitap's iPhones, or an Android `.apk`) and start the run with
+`--ios-physical` / `--android-physical`:
+
+```bash
+minitest --json --app <app_id> build upload ./MyApp-device.ipa --physical
+minitest --json --app <app_id> run all --ios-build <build_id> --ios-physical
+```
+
+A device build uploaded without `--physical` is rejected (exit 5,
+`ios.device_only_*` / `ios.no_simulator_slice`) with a hint to add the flag; a
+Simulator build uploaded with `--physical` is rejected with
+`ios.simulator_only_ipa`. `--ios-physical` / `--android-physical` need their
+build flag and cannot be combined with `--*-device-type`. A workspace without
+physical devices gets exit 3 and a message saying so: tell the user to ask
+Minitap to enable them, don't retry.
 
 For a repo-connected app, queue a build directly from GitHub without starting
 tests:
@@ -894,6 +912,10 @@ minitest --json --app <app_id> run start --tag checkout --tag auth \
 minitest --json --app <app_id> run all \
   --ios-build <ios_build_id> \
   --android-build <android_build_id>
+
+# Run ALL scenarios on physical iPhones (build uploaded with --physical)
+minitest --json --app <app_id> run all \
+  --ios-build <ios_build_id> --ios-physical
 
 # Run ALL scenarios on web targets only
 minitest --json --app <app_id> run all --web
@@ -1245,6 +1267,8 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Remove an env var   | `minitest --json --app ID env unset <KEY> --yes [--dry-run]`                             |
 | Clear all env vars  | `minitest --json --app ID env clear --yes [--dry-run]`                                   |
 | Upload native build | `minitest --json --app ID build upload ./app.apk`                                        |
+| Upload device build (physical) | `minitest --json --app ID build upload ./app.ipa --physical`                  |
+| Run on physical devices | `minitest --json --app ID run all --ios-build BID --ios-physical`                     |
 | List builds         | `minitest --json --app ID build list [--platform P] [--status S] [--kind K]`            |
 | Build from GitHub commit | `minitest --json --app ID build from-commit [SHA] [--platform P] [--force-full]`   |
 | Run one native story| `minitest --json --app ID run start "Story Name" --ios-build X --android-build Y [--ios-device-type phone\|tablet] [--android-device-type phone\|tablet]` |
