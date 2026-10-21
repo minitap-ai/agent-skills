@@ -757,51 +757,69 @@ until then.
 
 ### 4. Upload native builds
 
-For iOS/Android apps, upload your `.apk` (Android) or `.ipa` (iOS) build
-artifacts. The platform is auto-detected from the file extension. Only `.apk`
-and `.ipa` files are supported. Web apps do **not** upload builds; create the app
-with `--platform web --web-url ...` and run the web lane with `--web`.
+For iOS/Android apps, upload your build artifact. The platform is auto-detected
+from the file extension: `.ipa` / `.app.zip` (iOS), `.apk` / `.apks` / `.aab`
+(Android). Web apps do **not** upload builds; create the app with
+`--platform web --web-url ...` and run the web lane with `--web`.
 
-> **Important — virtual-device builds required:**
+> **Builds that fit the device:**
 >
-> Tests run on simulators/emulators, not physical devices. You must upload
-> builds that are compatible with virtual devices:
->
-> - **iOS:** a **Simulator build** (`.ipa` built for the iOS Simulator
->   destination, not a physical device). In Xcode: build for
->   *"Any iOS Simulator Device"* or a specific Simulator target.
-> - **Android:** an **x86_64-compatible `.apk`**. Ensure your Gradle build
->   includes the `x86_64` ABI.
->
-> Uploading a device-only build (e.g. an arm64 iOS archive or an arm-only
-> Android APK) will cause test runs to fail.
+> - **iOS on simulators:** a **Simulator build** (built for *"Any iOS Simulator
+>   Device"*, not a device archive).
+> - **Android, preferred:** upload the **`.aab`** (Android App Bundle, needs
+>   minitest-cli 0.38.1+). Minitap signs it with the workspace key and converts
+>   it on the server; the upload waits for the conversion (`--no-wait` to skip).
+>   A bundle with Play Asset Delivery packs converts into **two builds** shown as
+>   one upload: an *Emulator* build (x86_64) and a *Phone* build (arm64), with
+>   asset packs installed through Google's local testing mode. A bundle without
+>   asset packs becomes one universal build (*All devices*). The upload prints a
+>   table of the builds, their ABIs, and the devices it can run on (`Runs on:`).
+> - **Android `.apk` / `.apks`:** cloud emulators run `x86_64` natively and
+>   `arm64-v8a` through translation (slower); physical phones need `arm64-v8a`
+>   (or `armeabi-v7a`). An x86_64-only build cannot run on phones.
 
 ```bash
+minitest --json --app <app_id> build upload ./app-release.aab
 minitest --json --app <app_id> build upload ./app-release.apk
 minitest --json --app <app_id> build upload ./MyApp.ipa
 minitest --json --app <app_id> build list --platform ios --page-size 1
 ```
 
-Pass `--platform ios|android` to `build upload` when the filename does not end
-in `.ipa` / `.apk` / `.apks` / `.app.zip` and auto-detection cannot fire.
+In `--json`, an `.aab` upload carries `bundleGroupId`, `supportedBackends`
+(`cloud`, `physical`) and `variants` (each build's `id`, `status`, `abis`,
+`deviceBuild`, `errorSummary`). Start runs with the id the upload printed, for
+any device type: Minitap installs the Phone build on physical phones and the
+Emulator build on emulators (falling back to the arm64 build if needed). If one
+build failed to convert (e.g. a bundle with no arm64 code has no Phone build),
+the other still works; `variants[].errorSummary` says why.
 
-**Physical devices.** If the workspace has physical devices enabled, upload a
-device build with `--physical` (an Ad Hoc or Development `.ipa` signed for
-Minitap's iPhones, or an Android `.apk`) and start the run with
-`--ios-physical` / `--android-physical`:
+Pass `--platform ios|android` to `build upload` when the filename does not end
+in `.ipa` / `.apk` / `.apks` / `.aab` / `.app.zip` and auto-detection cannot
+fire.
+
+**Physical devices.** If the workspace has physical devices enabled, start the
+run with `--ios-physical` / `--android-physical`. iOS needs a device build
+uploaded with `--physical` (an Ad Hoc or Development `.ipa` signed for
+Minitap's iPhones). Android needs an arm64 build: upload the `.aab` (no flag
+needed; `--physical` on an `.aab` only prints a note), or an arm64 `.apk`.
 
 ```bash
 minitest --json --app <app_id> build upload ./MyApp-device.ipa --physical
 minitest --json --app <app_id> run all --ios-build <build_id> --ios-physical
+minitest --json --app <app_id> build upload ./app-release.aab
+minitest --json --app <app_id> run all --android-build <build_id> --android-physical
 ```
 
-A device build uploaded without `--physical` is rejected (exit 5,
+An iOS device build uploaded without `--physical` is rejected (exit 5,
 `ios.device_only_*` / `ios.no_simulator_slice`) with a hint to add the flag; a
 Simulator build uploaded with `--physical` is rejected with
-`ios.simulator_only_ipa`. `--ios-physical` / `--android-physical` need their
-build flag and cannot be combined with `--*-device-type`. A workspace without
-physical devices gets exit 3 and a message saying so: tell the user to ask
-Minitap to enable them, don't retry.
+`ios.simulator_only_ipa`. An Android build with no arm64 code started with
+`--android-physical` is rejected (exit 5, "cannot run on physical devices") with
+a hint: upload the `.aab`, or rebuild with arm64-v8a libraries if the bundle
+itself has none. `--ios-physical` / `--android-physical` need their build flag
+and cannot be combined with `--*-device-type`. A workspace without physical
+devices gets exit 3 and a message saying so: tell the user to ask Minitap to
+enable them, don't retry.
 
 For a repo-connected app, queue a build directly from GitHub without starting
 tests:
@@ -1267,8 +1285,9 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Remove an env var   | `minitest --json --app ID env unset <KEY> --yes [--dry-run]`                             |
 | Clear all env vars  | `minitest --json --app ID env clear --yes [--dry-run]`                                   |
 | Upload native build | `minitest --json --app ID build upload ./app.apk`                                        |
+| Upload Android bundle (emulators + phones) | `minitest --json --app ID build upload ./app.aab` (CLI 0.38.1+)  |
 | Upload device build (physical) | `minitest --json --app ID build upload ./app.ipa --physical`                  |
-| Run on physical devices | `minitest --json --app ID run all --ios-build BID --ios-physical`                     |
+| Run on physical devices | `minitest --json --app ID run all --ios-build BID --ios-physical` / `--android-build BID --android-physical` |
 | List builds         | `minitest --json --app ID build list [--platform P] [--status S] [--kind K]`            |
 | Build from GitHub commit | `minitest --json --app ID build from-commit [SHA] [--platform P] [--force-full]`   |
 | Run one native story| `minitest --json --app ID run start "Story Name" --ios-build X --android-build Y [--ios-device-type phone\|tablet] [--android-device-type phone\|tablet]` |
