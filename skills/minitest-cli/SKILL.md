@@ -1101,6 +1101,29 @@ Suggested loop for a failed criterion:
 Then decide whether the verdict is a real app bug, a tester mistake, or a stale
 criterion.
 
+### 8c. Read the target's logs (device log, crash report, browser console, HAR)
+
+When the recording shows the app closing, freezing or erroring, read the logs
+captured on the same target. `run logs` writes them decompressed:
+
+```bash
+minitest --json --app <app_id> run logs <story_run_id> [--platform ios|android|web] [--target-id <srp_id>] [--out DIR]
+```
+
+It writes to `--out` (default `./minitest-logs/<run_id>-<platform>/`):
+
+- `device.log`: Android logcat (Minitap tooling removed) or iOS simulator syslog.
+- `crash-report.txt`: only when the app crashed; each stack trace, then the 200
+  lines before it.
+- Web targets: `browser-console.log` and `network.har` (no bodies; opens in
+  Chrome DevTools) once web capture is enabled for the workspace.
+
+`crashes[]` in the JSON gives each crash's `summary` (e.g.
+`NullPointerException in PaymentSheetViewModel.kt:118`) and `offsetMs` from the
+start of the recording. Exit 1 while the target still runs; exit 4 when nothing
+was captured (physical iPhones aren't captured yet) or logs aren't enabled for
+the workspace.
+
 ### 9. Read open issues and fix prompts
 
 `issues list` returns the findings to fix as JSON, including each issue's
@@ -1308,6 +1331,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Submit result feedback | `minitest --json --app ID run feedback <result_id> "text"`                         |
 | Recording + timed verdicts/actions | `minitest --json --app ID run recording <run_id> [--platform P] [--srp ID] [--device N] [--out DIR] [--criterion-frames N]` |
 | Frame strips from a video | `minitest run frames <video> [--start S] [--end E] [--every SEC] [--at T ...] [--columns N] [--width PX]` |
+| Target logs (device log, crash report, console, HAR) | `minitest --json --app ID run logs <run_id> [--platform P] [--target-id ID] [--out DIR]` |
 | Cancel batch        | `minitest --json --app ID batch cancel <batch_id>`                                       |
 | Auth                | `minitest auth login`, `minitest --json auth status`, `minitest auth logout`      |
 | Refresh this skill  | `minitest skill` (prints the latest skill markdown)                               |
