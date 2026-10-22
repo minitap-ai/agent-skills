@@ -625,6 +625,14 @@ minitest --app <app_id> scenario update <story_id> --clear-camera-media
 > file must be an image or video within the size caps — **video ≤ 50 MB, image
 > ≤ 25 MB**. `--camera-media` and `--clear-camera-media` are mutually exclusive.
 
+#### In-app purchases
+
+Pass `--in-app-purchases` on `scenario create` / `update` when the journey goes
+through an in-app purchase, a subscription, or a restore of purchases, so physical
+iPhone runs use a device signed in to a Sandbox Apple Account;
+`--no-in-app-purchases` turns it off. It is ignored (the CLI warns) when the
+workspace does not have in-app purchases enabled.
+
 ### 3. Tags, and app knowledge
 
 > Needs a minitest-cli release with `minitest tags`. Check with `minitest --version`
@@ -1285,6 +1293,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Set story device count | `minitest --json --app ID scenario update <id> --device-count 2` (or `auto` to reset) |
 | Set story camera media | `minitest --json --app ID scenario update <id> --camera-media <path-or-file-id>` (video ≤ 50 MB / image ≤ 25 MB) |
 | Clear story camera media | `minitest --json --app ID scenario update <id> --clear-camera-media` (back to default feed) |
+| Mark story as in-app purchase | `minitest --json --app ID scenario update <id> --in-app-purchases` (`--no-in-app-purchases` to clear) |
 | List tags           | `minitest --json --app ID tags list`                                                     |
 | Create tag          | `minitest --json --app ID tags create --name "checkout" [--color amber] [--description "..."]` |
 | Rename tag          | `minitest --json --app ID tags update "checkout" --name "payments"`                      |
