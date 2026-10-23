@@ -1231,6 +1231,32 @@ use the optional `flow` value as the scenario ID when needed. From an issue
 URL, use `issueId` with `issues list --issue` or `issues fix`. The CLI itself
 never parses webapp URLs.
 
+### 10. Scheduled runs (`minitest schedules`)
+
+A schedule runs scenarios on its own at a set time (e.g. weekdays 03:00 in
+Europe/Oslo) and posts one Slack summary per start. Create one when the user
+wants the app checked without anyone pressing Run ("every night", "watch
+production"); for one-off runs use `run start` / `run all`, for per-commit
+checks the CI pattern below. Confirm the Slack channel ID and show
+`schedules preview` (scenarios per night, duration, builds it would pick) before
+saving: every start spends credits.
+
+```bash
+# Create: tagged scenarios on desktop Chrome, weekdays at 03:00 (machine timezone by default)
+minitest --json --app $APP schedules create --name "Nightly sanity check" --at 03:00 \
+  --tag smoke --url https://www.example.com --browser chrome --slack-channel C0123ABCD
+# Run it now (same path as the nightly start; posts to Slack)
+minitest --json --app $APP schedules run "Nightly sanity check"
+# Read the last nights: verdict, new / still-open / fixed issues, what was tested
+minitest --json --app $APP schedules fires "Nightly sanity check" --limit 5
+```
+
+A night that didn't run is a fire with `status: "skipped"` and **always a
+`skipReason`** (`out_of_credits`, `no_build`, `build_failed`,
+`previous_still_running`, `no_scenarios`, `no_phone_free`…): report it, never
+read a missing run as all clear. Every flag, `--from-file` for agents, and
+`update` semantics: [`commands/schedules.md`](commands/schedules.md).
+
 ## CI / Automation Pattern
 
 ```bash
@@ -1357,6 +1383,13 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Frame strips from a video | `minitest run frames <video> [--start S] [--end E] [--every SEC] [--at T ...] [--columns N] [--width PX]` |
 | Target logs (device log, crash report, console, HAR) | `minitest --json --app ID run logs <run_id> [--platform P] [--target-id ID] [--out DIR]` |
 | Cancel batch        | `minitest --json --app ID batch cancel <batch_id>`                                       |
+| Create a schedule   | `minitest --json --app ID schedules create --name N --at 03:00 [--days weekdays] [--timezone Europe/Oslo] [--tag T \| --scenario S] (--url U --browser chrome \| --android [--android-build ID]) --slack-channel C…` — see [`commands/schedules.md`](commands/schedules.md) |
+| Preview a schedule  | `minitest --json --app ID schedules preview <schedule>` (or the `create` flags): duration, builds tonight would pick |
+| List / show schedules | `minitest --json --app ID schedules list` / `schedules get <schedule>`                  |
+| Change / pause a schedule | `minitest --json --app ID schedules update <schedule> [flags] [--from-file f.yaml]` / `pause` / `resume` |
+| Run a schedule now  | `minitest --json --app ID schedules run <schedule>` (returns the fire: started + `batchId`, or skipped + `skipReason`) |
+| Schedule history    | `minitest --json --app ID schedules fires <schedule> [--limit 5]` (verdict, new / still open / `fixed[]`, or `skipReason`) |
+| Delete a schedule   | `minitest --json --app ID schedules delete <schedule> --yes` (`schedules restore <id>` undoes) |
 | Auth                | `minitest auth login`, `minitest --json auth status`, `minitest auth logout`      |
 | Refresh this skill  | `minitest skill` (prints the latest skill markdown)                               |
 | Upgrade the CLI     | `minitest upgrade`                                                                |
