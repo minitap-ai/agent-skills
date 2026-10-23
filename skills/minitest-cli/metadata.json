@@ -27,6 +27,9 @@
     "create minitest app",
     "minitest glossary",
     "minitest brief",
-    "minitest app-guide"
+    "minitest app-guide",
+    "minitest schedules",
+    "scheduled runs",
+    "run tests every night"
   ]
 }
