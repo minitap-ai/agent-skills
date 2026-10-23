@@ -58,9 +58,11 @@ minitest --json --app $APP schedules fires "Nightly sanity check" --limit 5
 Newest first. Each started fire carries a `summary`: `outcome`
 (`passed` / `warning` / `critical` / `errored` / `running`), `passed` /
 `total` / `unchecked` checks, `issues[]` with `isNew` (not failing at the
-schedule's previous run) — the rest are still open — and what was tested
-(`testedBuilds[]`, `testedUrl`, each with `isNew`). Open the run with its
-`batchId`.
+schedule's previous run) — the rest are still open — `fixed[]`
+(`{issueId, title}`: failed at the previous run, worked in this one) with
+`fixedCount`, and what was tested (`testedBuilds[]`, `testedUrl`, each with
+`isNew`). Open the run with its `batchId`. The human table shows New, Still
+open and Fixed counts per night.
 
 **A night that didn't run always has a reason**: `status: "skipped"` with
 `skipReason` one of `out_of_credits`, `spend_limit`, `subscription_inactive`,

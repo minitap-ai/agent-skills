@@ -1247,7 +1247,7 @@ minitest --json --app $APP schedules create --name "Nightly sanity check" --at 0
   --tag smoke --url https://www.example.com --browser chrome --slack-channel C0123ABCD
 # Run it now (same path as the nightly start; posts to Slack)
 minitest --json --app $APP schedules run "Nightly sanity check"
-# Read the last nights: verdict, new vs still-open issues, what was tested
+# Read the last nights: verdict, new / still-open / fixed issues, what was tested
 minitest --json --app $APP schedules fires "Nightly sanity check" --limit 5
 ```
 
@@ -1388,7 +1388,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | List / show schedules | `minitest --json --app ID schedules list` / `schedules get <schedule>`                  |
 | Change / pause a schedule | `minitest --json --app ID schedules update <schedule> [flags] [--from-file f.yaml]` / `pause` / `resume` |
 | Run a schedule now  | `minitest --json --app ID schedules run <schedule>` (returns the fire: started + `batchId`, or skipped + `skipReason`) |
-| Schedule history    | `minitest --json --app ID schedules fires <schedule> [--limit 5]`                        |
+| Schedule history    | `minitest --json --app ID schedules fires <schedule> [--limit 5]` (verdict, new / still open / `fixed[]`, or `skipReason`) |
 | Delete a schedule   | `minitest --json --app ID schedules delete <schedule> --yes` (`schedules restore <id>` undoes) |
 | Auth                | `minitest auth login`, `minitest --json auth status`, `minitest auth logout`      |
 | Refresh this skill  | `minitest skill` (prints the latest skill markdown)                               |
