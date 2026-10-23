@@ -24,6 +24,9 @@
     "minitest flow",
     "minitest run",
     "minitest apps create",
-    "create minitest app"
+    "create minitest app",
+    "minitest glossary",
+    "minitest brief",
+    "minitest app-guide"
   ]
 }

@@ -112,7 +112,8 @@ Two companion references support that workflow:
 The workflow ends by **applying the suite through the ordinary `minitest` CLI
 commands already documented in this SKILL.md** — `test-profile create`,
 `scenario create` (with `--criteria`, `--profile`, `--depends-on`),
-`app-knowledge update`, and so on. There is no special apply command: the
+`app-knowledge update` (or `brief` / `app-guide` / `glossary` on Knowledge v2
+workspaces), and so on. There is no special apply command: the
 reviewed suite is replayed as regular CLI calls in dependency order.
 
 If a scenario needs a file available in the test environment (a photo to
@@ -706,6 +707,16 @@ outside the UI under test (a customer test backend, an admin console, a debug
 menu, a sandbox payment) belong in **app skills** (`minitest app-skill`): when
 to write one, how to split them, secrets and maintenance proposals are in
 [`commands/app-skills.md`](commands/app-skills.md).
+
+**Workspaces with Knowledge v2** split app knowledge into a **Product brief**
+(what the app is), an **App guide** (how to get around it) and a
+**Glossary** (the app's own terms), each versioned with its author. Write each
+fact in the element whose job it is, with `minitest brief`, `minitest app-guide`
+and `minitest glossary`, and read who changed what with `minitest knowledge
+history`. What goes where and every command:
+[`commands/knowledge.md`](commands/knowledge.md). These writes exit 1 with
+`Knowledge v2 … is not enabled for this workspace` elsewhere: use
+`app-knowledge` there.
 
 ### 3b. See what exploration actually mapped (`minitest screens`)
 
@@ -1306,6 +1317,10 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Inspect one screen  | `minitest --json --app ID screens get "Onboarding age"`                                  |
 | Read app knowledge  | `minitest --json app-knowledge get --app ID`                                             |
 | Update app knowledge| `minitest --json app-knowledge update --app ID --content-file ./knowledge.md`            |
+| Read / write the Product brief (Knowledge v2) | `minitest --json --app ID brief get` / `brief update --content-file ./brief.md` — see [`commands/knowledge.md`](commands/knowledge.md) |
+| Read / write the App guide (Knowledge v2) | `minitest --json --app ID app-guide get` / `app-guide update --content-file ./guide.md` |
+| Glossary terms (Knowledge v2) | `minitest --json --app ID glossary list\|add --term T --meaning M [--alias A]\|update <id-or-term>\|remove <id-or-term> --yes` |
+| Knowledge change history / undo | `minitest --json --app ID knowledge history [--element product_brief\|app_guide\|glossary]` / `knowledge revert <versionId>` |
 | List / read app skills | `minitest --json --app ID app-skill list` / `app-skill get <name>` — see [`commands/app-skills.md`](commands/app-skills.md) |
 | Create an app skill | `minitest --json --app ID app-skill create <name> --description "Use when …" --instructions-file ./skill.md` |
 | Propose a skill fix | `minitest --json --app ID app-skill propose <name> --reason "…" --instructions-file ./skill.md` |
