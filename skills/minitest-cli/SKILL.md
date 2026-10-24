@@ -458,6 +458,8 @@ printf "%s" "$PASSWORD" | `minitest --json --app $APP test-profile create \
 
 **Specific account state (e.g. premium).** To exercise a flow that needs a particular state, proactively create a `<something>@qa.minitap.ai` persona WITH an explicit password, then ask the user to link that exact email+password combo to a pro/specific-state account in their backend. The `@qa.minitap.ai` address keeps the inbox readable for any OTP while the password lets them pre-provision the account state.
 
+**Credentials as secrets.** Instead of a literal password, OTP seed or card, a persona can point at an app secret: `--password-secret`, `--otp-secret`, `--card-secret` (generated, or still waiting for the user's value). See [Secrets](#secrets-minitest-secret).
+
 **No persona bound.** If a story has no profile, the agent defaults to anonymous (skip login). If a flow forces authentication, it self-generates a `<random>@qa.minitap.ai` with a runtime password, signs up, and reads the inbox for the confirmation/OTP code — so unbound scenarios still work without you provisioning anything.
 
 **Phone-OTP personas.** If the app authenticates via SMS one-time codes instead of email, set `--phone-number` (E.164, e.g. `+14155551234`) and `--static-otp-code` (the fixed code the customer's backend accepts for that number) instead of `--username`/`--password`:
@@ -1326,6 +1328,12 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Propose a skill fix | `minitest --json --app ID app-skill propose <name> --reason "…" --instructions-file ./skill.md` |
 | Set a skill secret  | `printf '%s' "$V" \| minitest --app ID app-skill secret set <name> <SECRET_NAME>` (value from stdin, never shown again) |
 | Link skills to story | `minitest --json --app ID scenario-binding set-skills <story_id> --skill <name>`      |
+| List / inspect secrets | `minitest --json --app ID secret list [--missing]` / `secret describe <NAME>` — see [Secrets](#secrets-minitest-secret) |
+| Generate a secret   | `minitest --json --app ID secret create <NAME> --kind password --generate [--length N] [--charset alnum]` |
+| Ask a human for a secret | `minitest --json --app ID secret create <NAME> --kind K --empty --reason "..." [--scenario ID]` |
+| Link a secret to a persona | `minitest --json --app ID test-profile update <id> --password-secret <NAME> \| --otp-secret <NAME> \| --card-secret <NAME>` |
+| Lint secret references | `minitest --app ID secret lint --scenario ID \| --file PATH \| --text "..."` (exit 1 on leak or missing) |
+| Set / remove / rename a secret (humans only) | `secret set <NAME> --kind K` (stdin), `secret unset <NAME>`, `secret rename <OLD> <NEW>`, `secret extract <scenario_id> --as <NAME> --kind K` |
 | List env vars       | `minitest --json --app ID env list` (values masked; `--show` reveals)                    |
 | Reveal one env var  | `minitest --app ID env get <KEY>` (prints the value verbatim to stdout)           |
 | Set an env var      | `minitest --json --app ID env set <KEY> <VALUE> --yes [--dry-run]`                       |
@@ -1409,6 +1417,84 @@ Bindings link profiles or files to a specific scenario:
   every file id you want bound; omitted ids are unbound. `--clear` unbinds all.
 - Skill binding: `set-skills` is atomic replace by skill name; Mini loads the
   linked skills before it starts. See [`commands/app-skills.md`](commands/app-skills.md).
+
+## Secrets (`minitest secret`)
+
+A secret is an app-scoped **name** (`UPPER_SNAKE`) and a **kind** (`password`,
+`totp` OTP seed, `card`, `token` API token, `text`). Its value is either
+**present** (typed by a human, or generated) or **missing** (waiting for a
+human, with a reason). Values are write-only: the CLI never prints one, and
+Mini and agents never see one; they handle names and references only.
+
+**Always `secret list` first** and reuse an existing secret before creating one:
+
+```bash
+minitest --json --app $APP secret list             # missing ones first, with their reason
+minitest --json --app $APP secret list --missing   # only those waiting for a value
+minitest --json --app $APP secret describe QA_PASSWORD   # kind, note, usages, reference to copy
+```
+
+Then create it without ever holding the value (both allowed inside a test run):
+
+- **You create the account yourself** (a `<prefix>@qa.minitap.ai` inbox
+  sign-up, an app with self sign-up): `--generate` a value for `password`,
+  `token` or `text` (not `card`, not `totp`). Default 24 characters
+  (`--length` 12-64) of letters, digits and `!-`; use `--charset alnum` if the
+  app refuses symbols. Link it, then sign up with the reference.
+- **Only the user has the value** (their real account, a card, an OTP seed, a
+  backend token): `--empty --reason "…"` (`--scenario ID` for the scenario that
+  needs it). Link or reference it right away and tell the user its name: runs
+  that need it are **skipped** (`secret_value_missing: NAME`) until a human
+  sets the value in the webapp (*Set value*) or with `secret set`.
+
+```bash
+minitest --json --app $APP secret create SIGNUP_PASSWORD --kind password --generate \
+  --note "Password of signup@qa.minitap.ai"
+minitest --json --app $APP secret create STAGING_CARD --kind card --empty \
+  --reason "Checkout needs the sandbox card the staging payment provider accepts" \
+  --scenario <scenario_id>
+```
+
+**Link it to a persona** by name (it may still be waiting for a value); pass an
+empty string on `update` to unlink:
+
+```bash
+minitest --json --app $APP test-profile create --name "New User" \
+  --username "signup@qa.minitap.ai" --password-secret SIGNUP_PASSWORD
+minitest --json --app $APP test-profile update <id> \
+  --otp-secret ADMIN_TOTP --card-secret STAGING_CARD
+```
+
+`--password-secret` takes a `password`, `--otp-secret` a `totp` (seed) or
+`text` (fixed code), `--card-secret` a `card`.
+
+**Reference it** in scenario descriptions, acceptance criteria and app-skill
+instructions as `{{secret:NAME}}`; a card field as `{{secret:NAME.number}}`,
+`.expiry`, `.cvc`, `.holder_name` or `.postal_code`. Mini receives the value at
+run time; it is never stored in the text. The legacy `$NAME` still works, but
+lint warns.
+
+**Lint before you save** (`--scenario ID`, `--file PATH` or `--text TEXT`):
+
+```bash
+minitest --app $APP secret lint --scenario <scenario_id>
+```
+
+- *pending*: referenced, exists, no value yet. A warning: runs wait for a human.
+- *missing*: referenced but no such secret. Exit 1: create it.
+- *leak*: a literal that is a secret's value or looks like one, reported by
+  position only. Exit 1: replace it by its reference.
+
+**Humans only** (never run these yourself; tell the user the command):
+`secret set NAME --kind K` (creates, replaces, or fills a missing value; value on
+stdin only), `secret unset NAME` (refused, exit 6, while still referenced),
+`secret rename OLD NEW` (rewrites every reference), and
+`secret extract <scenario_id> --as NAME --kind K` (turns a leaked literal into a
+secret). `set` and `extract` refuse to run inside a test run.
+
+Never put a value in a command argument, a scenario, a criterion, a skill, a
+note or a reason: arguments land in shell history and logs.
+`secret request` is a deprecated alias of `create --empty`.
 
 ## Drafts with Mini (`minitest draft`)
 
