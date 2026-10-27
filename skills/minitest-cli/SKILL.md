@@ -365,6 +365,30 @@ CLI:** if `connectors` lists none (or none online), ask a workspace owner or
 admin to create one in the web app under **Workspace settings → Private
 network** and start it inside their network.
 
+#### Backend API
+
+When the app has a backend you own with an OpenAPI document, Mini can search
+that document and call the backend during runs (for example to arrange the state
+a scenario needs), authenticated with app vault secrets. Off by default.
+
+```bash
+minitest --json --app <app_id> apps backend-api show
+minitest --json --app <app_id> apps backend-api set --enable \
+  --base-url https://api.staging.example.com \
+  --openapi-url https://api.staging.example.com/openapi.json \
+  --secret API_TOKEN [--remove-secret <name>] [--clear-secrets] \
+  [--skill <name-or-id> | --clear-skill]
+minitest --json --app <app_id> apps backend-api set --disable
+```
+
+`set` changes only what you pass. `--secret` names an existing app vault secret
+(`minitest secret set`); `show` lists `missingSecretNames` that are no longer in
+the vault. Private, loopback and cloud-metadata URLs are refused (exit 1 with the
+server's reason). To point one run at another backend, add
+`--backend-base-url <url>` and/or `--backend-openapi-url <url>` to `run start`,
+`run all` or `run from-commit`: only that run uses them, the saved settings stay,
+and the backend API must already be on.
+
 ### 2. Create scenarios
 
 A **scenario** describes a user journey to test. It has a name, a few tags, an
@@ -1317,6 +1341,8 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Create web app      | `minitest --json apps create --name "My Web App" --platform web --web-url https://example.com [--tenant ID]` |
 | Residential proxy (owner/admin to change) | `minitest --json --app ID apps residential-proxy show` / `set [--enable\|--disable] [--country tr] [--domain D ...]` |
 | Private network (owner/admin to change) | `minitest --json --app ID apps private-network show` / `connectors` / `set [--enable\|--disable] [--connector NAME] [--domain D ...] [--port 443 ...]` |
+| Backend API (OpenAPI) | `minitest --json --app ID apps backend-api show` / `set [--enable\|--disable] [--base-url U] [--openapi-url U] [--secret NAME ...] [--remove-secret NAME] [--clear-secrets] [--skill NAME\|--clear-skill]` |
+| Point one run at another backend | `run start\|all\|from-commit ... --backend-base-url U --backend-openapi-url U` |
 | Create scenario   | `minitest --json --app ID scenario create --name "..." --tag auth --criteria "..."` |
 | Create scenario with profile | `minitest --json --app ID scenario create --name "..." --tag auth --profile <profile_id> --criteria "..."` |
 | List scenarios   | `minitest --json --app ID scenario list`                                               |
