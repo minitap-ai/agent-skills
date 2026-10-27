@@ -58,11 +58,19 @@ the new version number on stdout. `knowledge history` returns
 `change` is `created`, `updated`, `deleted` or `reverted`. `knowledge revert
 <versionId>` puts the element (a document, or one glossary term) back to that
 version's content and records it as a new `reverted` change, so it can itself be
-reverted. Every write from the CLI is recorded with channel `cli`.
+reverted. Every write from the CLI is recorded with channel `cli` by default;
+set `MINITEST_CHANNEL` to tag an automated editor's writes with another channel.
 
 ## Workspaces without Knowledge v2
 
 Writes exit 1 with `Knowledge v2 (Product brief, App guide, Glossary) is not
-enabled for this workspace`. Keep using `minitest app-knowledge` there. On a v2
-workspace, `app-knowledge get` still works but returns a document rendered from
-the brief, app guide and glossary: edit the elements, not that document.
+enabled for this workspace`. Keep using `minitest app-knowledge` there.
+
+On a v2 workspace the reverse holds: `app-knowledge get` still works and returns
+a document rendered from the brief, app guide and glossary, but `app-knowledge
+update` is refused — `PUT /api/v1/apps/{app_id}/app-knowledge` answers HTTP 409
+with a flat `{error, message}` body, error code `knowledge_v2_enabled` and the
+message "This workspace uses typed knowledge: edit the Product brief, App guide
+or Glossary instead of the App knowledge document." The CLI prints that as
+`Validation error (409): <backend message>` and exits 1. Edit the elements with
+the commands above, not that rendered document.

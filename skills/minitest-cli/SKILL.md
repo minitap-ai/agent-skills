@@ -687,8 +687,9 @@ Note the `--app` position: this group declares its own, so it goes **after** the
 subcommand and the global pre-subcommand form exits 2.
 
 ```bash
-# {"appId": …, "content": "<markdown>"} — no version metadata on read,
-# and exit 4 when the app has no knowledge set yet
+# {"appId": …, "content": "<markdown>"} — no version metadata on read.
+# No knowledge written yet still succeeds, with "content": null; exit 4 means
+# the app or its test config was not found.
 minitest --json app-knowledge get --app <app_id>
 
 # Push a new version inline
@@ -698,9 +699,11 @@ minitest --json app-knowledge update --app <app_id> --content "# App Knowledge\n
 minitest --json app-knowledge update --app <app_id> --content-file ./app-knowledge.md
 ```
 
-`app-knowledge update` calls `PUT /api/v1/apps/{app_id}/app-knowledge` and
-prints the new `versionNumber` to stdout (full record with `--json`). Each
-update creates a new prompt version — there is no rollback shortcut.
+`app-knowledge update` calls `PUT /api/v1/apps/{app_id}/app-knowledge`. On a
+workspace **without Knowledge v2** it succeeds and prints the new
+`versionNumber` to stdout (full record with `--json`); each update creates a new
+prompt version and there is no rollback shortcut. On a Knowledge v2 workspace
+the same call is rejected — see below.
 
 App knowledge is for the product only. Procedures that arrange test state
 outside the UI under test (a customer test backend, an admin console, a debug
@@ -717,6 +720,17 @@ history`. What goes where and every command:
 [`commands/knowledge.md`](commands/knowledge.md). These writes exit 1 with
 `Knowledge v2 … is not enabled for this workspace` elsewhere: use
 `app-knowledge` there.
+
+On a Knowledge v2 workspace, `app-knowledge get` remains readable and returns a
+document rendered from the Product brief, App guide and Glossary. Edit those
+elements instead: `app-knowledge update` calls
+`PUT /api/v1/apps/{app_id}/app-knowledge`, which returns HTTP 409 with a flat
+`{error, message}` body and error code `knowledge_v2_enabled`. The backend
+message is "This workspace uses typed knowledge: edit the Product brief, App
+guide or Glossary instead of the App knowledge document." CLI v0.41.0 formats it
+with its generic validation-error formatter, printing
+`Validation error (409): <backend message>` and exiting 1, so the backend's
+actionable guidance reaches you unchanged.
 
 ### 3b. See what exploration actually mapped (`minitest screens`)
 
@@ -1342,7 +1356,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Screens the crawl was blocked on | `minitest --json --app ID screens list --blocked`                           |
 | Inspect one screen  | `minitest --json --app ID screens get "Onboarding age"`                                  |
 | Read app knowledge  | `minitest --json app-knowledge get --app ID`                                             |
-| Update app knowledge| `minitest --json app-knowledge update --app ID --content-file ./knowledge.md`            |
+| Update app knowledge (without Knowledge v2) | `minitest --json app-knowledge update --app ID --content-file ./knowledge.md`  |
 | Read / write the Product brief (Knowledge v2) | `minitest --json --app ID brief get` / `brief update --content-file ./brief.md` — see [`commands/knowledge.md`](commands/knowledge.md) |
 | Read / write the App guide (Knowledge v2) | `minitest --json --app ID app-guide get` / `app-guide update --content-file ./guide.md` |
 | Glossary terms (Knowledge v2) | `minitest --json --app ID glossary list\|add --term T --meaning M [--alias A]\|update <id-or-term>\|remove <id-or-term> --yes` |
@@ -1351,7 +1365,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Create an app skill | `minitest --json --app ID app-skill create <name> --description "Use when …" --instructions-file ./skill.md` |
 | Propose a skill fix | `minitest --json --app ID app-skill propose <name> --reason "…" --instructions-file ./skill.md` |
 | Set a skill secret  | `printf '%s' "$V" \| minitest --app ID app-skill secret set <name> <SECRET_NAME>` (value from stdin, never shown again) |
-| Link skills to story | `minitest --json --app ID scenario-binding set-skills <story_id> --skill <name>`      |
+| Link skills to story | `minitest --json --app ID scenario-binding set-app-skills <story_id> --skill <name>`  |
 | List env vars       | `minitest --json --app ID env list` (values masked; `--show` reveals)                    |
 | Reveal one env var  | `minitest --app ID env get <KEY>` (prints the value verbatim to stdout)           |
 | Set an env var      | `minitest --json --app ID env set <KEY> <VALUE> --yes [--dry-run]`                       |
@@ -1440,7 +1454,7 @@ Bindings link profiles or files to a specific scenario:
 - Profile binding: at most one profile per story. `set-profile --clear` unbinds.
 - File binding: many files per story. `set-files` is **atomic replace** — pass
   every file id you want bound; omitted ids are unbound. `--clear` unbinds all.
-- Skill binding: `set-skills` is atomic replace by skill name; Mini loads the
+- Skill binding: `set-app-skills` is atomic replace by skill name; Mini loads the
   linked skills before it starts. See [`commands/app-skills.md`](commands/app-skills.md).
 
 ## Drafts with Mini (`minitest draft`)
