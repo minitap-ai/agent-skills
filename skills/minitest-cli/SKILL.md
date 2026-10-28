@@ -1211,6 +1211,14 @@ Each issue carries `issueStatus`: `review` means nobody has triaged it yet
 issue whose `criticality` is `null` is unclassified; it still needs triage.
 `lastSeenVersion` is the app version it was last seen on.
 
+An issue is one acceptance criterion across runs and platforms: its
+`criticality`, `platform` and `storyRunId` come from its **latest** occurrence,
+which may be another run than the one you are triaging. To judge a given run,
+read its failed criteria from `run verdicts <batch_id>` (each carries its own
+`criticality` and `platform` for that run) and look up each one's issue by
+`criterionId`, which both outputs share, for its `fixPrompt`, `deeplink` and
+`consecutiveFailures`. A failed criterion can also have no issue at all.
+
 The response has three blocks:
 
 - `scope`: selected scope and filters, plus the non-interactive widen counters.
