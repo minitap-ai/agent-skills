@@ -69,8 +69,9 @@ value by design:
   any subcommand
 - Upgrade: `minitest upgrade` (check the installed version with `minitest --version`)
 - Auto-update: a CLI installed with `uv tool install` (the only supported
-  install; the Homebrew formula is retired) updates itself and this skill in the background when a newer release is out (never in CI,
-  containers or on Windows). A one-line stderr notice such as `Updating
+  install; the Homebrew formula is retired) updates itself and this skill in
+  the background when a newer release is out (never in CI, containers or on
+  Windows). A one-line stderr notice such as `Updating
   minitest-cli 0.41.0 → 0.42.0 in the background` or `minitest-cli updated
   itself to 0.42.0` is informational: carry on, the next command uses the new
   version. If the skill was refreshed mid-task, re-read it before relying on a
