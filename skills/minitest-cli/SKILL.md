@@ -1188,18 +1188,28 @@ minitest --app <app_id> issues list
 minitest --app <app_id> issues list --issue <failure_id>
 minitest --app <app_id> issues list --run <story_run_id>
 minitest --app <app_id> issues list --batch <batch_id>
+minitest --app <app_id> issues list --all-runs        # every issue of the app (the Issues page)
 minitest --app <app_id> issues list [--platform ios|android|web] [--criticality critical|warning] [--include-resolved]
 ```
 
-Choose at most one of `--issue`, `--run`, and `--batch`. With no scope flag,
-the command uses the latest batch. Its `scope` block then reports
-`otherBatchesWithOpenIssues` and `openIssuesInOtherBatches`, so an agent can
+Choose at most one of `--issue`, `--run`, `--batch`, and `--all-runs`. With no
+scope flag, the command uses the latest batch. Its `scope` block then reports
+`otherBatchesWithOpenIssues` and `openIssuesInOtherBatches` (duplicates
+included: the same issue counts once per batch it failed in), so an agent can
 offer to inspect older batches without prompting interactively.
 
 The CLI never widens scope or asks an interactive question. If either widen
-counter is non-zero, report the current result and the option to inspect older
-batches without blocking for input. Use `batch list` to obtain batch IDs, then
-call `issues list --batch <batch_id>` only when wider scope is requested.
+counter is non-zero, report the current result and the option to widen without
+blocking for input. When wider scope is requested, use `--all-runs`: it returns
+every open issue of the app once, whatever batch it was last seen in, like the
+webapp's Issues page (`scope.kind` is `app` and the `build` block is empty).
+Walking `batch list` + `issues list --batch` misses issues last seen in batches
+the run list does not return.
+
+Each issue carries `issueStatus`: `review` means nobody has triaged it yet
+(the Issues page's *New* tab), `acknowledged` and `fixed` mean someone has. An
+issue whose `criticality` is `null` is unclassified; it still needs triage.
+`lastSeenVersion` is the app version it was last seen on.
 
 The response has three blocks:
 
@@ -1411,7 +1421,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | List batches        | `minitest --json --app ID batch list`                                                    |
 | Get batch + runs    | `minitest --json --app ID batch get <batch_id>`                                          |
 | Batch verdicts (one call) | `minitest --json --app ID run verdicts <batch_id> [--platform P] [--only-failed] [--actionable] [--verbose]` |
-| List issues and fix prompts | `minitest --app ID issues list [--issue ID \| --run ID \| --batch ID] [--platform P] [--criticality C] [--include-resolved]` |
+| List issues and fix prompts | `minitest --app ID issues list [--issue ID \| --run ID \| --batch ID \| --all-runs] [--platform P] [--criticality C] [--include-resolved]` |
 | Mark app issues fixed | `minitest --app ID issues fix <failure_id> [<failure_id> ...]`                          |
 | Submit result feedback | `minitest --json --app ID run feedback <result_id> "text"`                         |
 | Recording + timed verdicts/actions | `minitest --json --app ID run recording <run_id> [--platform P] [--srp ID] [--device N] [--out DIR] [--criterion-frames N]` |
