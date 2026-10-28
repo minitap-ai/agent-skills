@@ -954,6 +954,11 @@ minitest --json --app <app_id> run start "User Login" \
   --android-build <android_build_id> \
   --no-watch
 
+# Run several scenarios, by name or UUID, in one batch (fire-and-forget)
+minitest --json --app <app_id> run start "User Login" "Checkout" <scenario_id> \
+  --ios-build <ios_build_id> \
+  --android-build <android_build_id>
+
 # Run every scenario carrying any of these tags (one batch, fire-and-forget)
 minitest --json --app <app_id> run start --tag checkout --tag auth \
   --ios-build <ios_build_id> \
@@ -989,7 +994,11 @@ exist.
 
 Under the hood, `run start` and `run all` create a **batch**. A single run is
 just a batch with one scenario. With `--json --no-watch`, `run start` emits
-only `{"runId": …, "status": …}`.
+only `{"runId": …, "status": …}`. Given several scenarios (or `--tag`),
+`run start` starts one batch, does not poll, and emits the batch summary
+(`batchId`, `status`, `storyRuns`); follow it with `batch get`. Only the
+selected scenarios run: dependencies between them are kept, and a scenario
+whose parent is not selected runs on its own, without that parent.
 
 `--web` requires a web execution target configured on the app in the Minitest
 web app; without one the run is refused even though the app was created with
@@ -1378,9 +1387,10 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | List builds         | `minitest --json --app ID build list [--platform P] [--status S] [--kind K]`            |
 | Build from GitHub commit | `minitest --json --app ID build from-commit [SHA] [--platform P] [--force-full]`   |
 | Run one native story| `minitest --json --app ID run start "Story Name" --ios-build X --android-build Y [--ios-device-type phone\|tablet] [--android-device-type phone\|tablet]` |
+| Run several native stories | `minitest --json --app ID run start "Story A" "Story B" --ios-build X --android-build Y` (one batch) |
 | Run tagged native stories | `minitest --json --app ID run start --tag smoke --ios-build X [--ios-device-type phone\|tablet]` |
 | Run one web story   | `minitest --json --app ID run start "Story Name" --web`                                 |
-| Run a tag           | `minitest --json --app ID run start --tag checkout --web` (not combinable with a story name) |
+| Run a tag           | `minitest --json --app ID run start --tag checkout --web` (not combinable with story names) |
 | Run all native stories | `minitest --json --app ID run all --ios-build X --android-build Y [--ios-device-type phone\|tablet] [--android-device-type phone\|tablet]` |
 | Run all web stories | `minitest --json --app ID run all --web`                                                 |
 | Build and run commit | `minitest --json --app ID run from-commit SHA [--platform P] [--ios-device-type phone\|tablet] [--android-device-type phone\|tablet] [--user-story ID] [--no-watch] [--timeout N]` |
