@@ -75,7 +75,10 @@ value by design:
   minitest-cli 0.41.0 → 0.42.0 in the background` or `minitest-cli updated
   itself to 0.42.0` is informational: carry on, the next command uses the new
   version. If the skill was refreshed mid-task, re-read it before relying on a
-  flag you have not used yet. `MINITEST_NO_AUTO_UPDATE=1` turns it off.
+  flag you have not used yet. `minitest --json upgrade auto` shows whether it is
+  on, why not, and the last update; `minitest upgrade auto off|on` changes it
+  for the user (only when the user asks), and `MINITEST_NO_AUTO_UPDATE=1` turns
+  it off for one environment.
 
 ## Onboarding a new app (`minitest init`)
 
@@ -1415,7 +1418,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Auth                | `minitest auth login`, `minitest --json auth status`, `minitest auth logout`      |
 | Refresh this skill  | `minitest skill` (prints the latest skill markdown)                               |
 | Upgrade the CLI     | `minitest upgrade`                                                                |
-| Turn off auto-update | `export MINITEST_NO_AUTO_UPDATE=1` (the CLI and this skill otherwise update themselves in the background) |
+| Auto-update status / on / off | `minitest --json upgrade auto` / `minitest upgrade auto on\|off` (`MINITEST_NO_AUTO_UPDATE=1` for one environment) |
 | Mint API key        | `minitest auth api-key mint --tenant <id> --name <label> --json` (OAuth only)            |
 | List API keys       | `minitest auth api-key list --tenant <id> --json`                                        |
 | Revoke API key      | `minitest auth api-key revoke --tenant <id> --key <id> --json`                           |
