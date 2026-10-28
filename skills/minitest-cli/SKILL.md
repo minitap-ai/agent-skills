@@ -68,6 +68,13 @@ value by design:
 - Set target app: `export MINITEST_APP_ID=<uuid>` or pass `--app <uuid>` before
   any subcommand
 - Upgrade: `minitest upgrade` (check the installed version with `minitest --version`)
+- Auto-update: a CLI installed with `uv tool install` or Homebrew updates itself
+  and this skill in the background when a newer release is out (never in CI,
+  containers or on Windows). A one-line stderr notice such as `Updating
+  minitest-cli 0.41.0 → 0.42.0 in the background` or `minitest-cli updated
+  itself to 0.42.0` is informational: carry on, the next command uses the new
+  version. If the skill was refreshed mid-task, re-read it before relying on a
+  flag you have not used yet. `MINITEST_NO_AUTO_UPDATE=1` turns it off.
 
 ## Onboarding a new app (`minitest init`)
 
@@ -1407,6 +1414,7 @@ the runs. Use `run verdicts <batch_id>` when you actually want the outcomes.
 | Auth                | `minitest auth login`, `minitest --json auth status`, `minitest auth logout`      |
 | Refresh this skill  | `minitest skill` (prints the latest skill markdown)                               |
 | Upgrade the CLI     | `minitest upgrade`                                                                |
+| Turn off auto-update | `export MINITEST_NO_AUTO_UPDATE=1` (the CLI and this skill otherwise update themselves in the background) |
 | Mint API key        | `minitest auth api-key mint --tenant <id> --name <label> --json` (OAuth only)            |
 | List API keys       | `minitest auth api-key list --tenant <id> --json`                                        |
 | Revoke API key      | `minitest auth api-key revoke --tenant <id> --key <id> --json`                           |
